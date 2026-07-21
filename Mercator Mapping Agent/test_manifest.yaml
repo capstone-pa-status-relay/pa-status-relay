@@ -1,0 +1,60 @@
+# test_manifest.yaml — PA Status Relay
+#
+# Every real test case (unit, integration, or manual regression case) that's
+# meant to satisfy a PRD acceptance criterion gets an entry here. mercator.py
+# reads this file and cross-checks it against the PRD directly — this file
+# is the thing that keeps that check honest, so keep it in sync as tests are
+# written, don't batch-update it at the end of the sprint.
+#
+# `covers` should be a close paraphrase or substring match of the actual PRD
+# acceptance criterion text — it doesn't need to be word-for-word, mercator.py
+# does fuzzy substring matching, but it needs to be recognizably the same
+# requirement, not a vague summary.
+
+tests:
+  - id: "TC-001"
+    covers: "User can view a list of mock PA cases with key metadata"
+  - id: "TC-002"
+    covers: "User can search, sort, and filter cases by status, patient name, or date"
+  - id: "TC-003"
+    covers: "User can create a new case with required fields"
+  - id: "TC-004"
+    covers: "User can edit an existing case's metadata"
+  - id: "TC-005"
+    covers: "User can select only valid status transitions from the current state"
+  - id: "TC-006"
+    covers: "User is blocked from completing a transition if required metadata is missing"
+  - id: "TC-007"
+    covers: "User sees an immutable audit entry within 500ms of a successful status change"
+  - id: "TC-008"
+    covers: "User can provide an optional reason code on any transition"
+  - id: "TC-009"
+    covers: "User sees a plain-language message preview modal on every status change when consent flag is TRUE"
+  - id: "TC-010"
+    covers: "User sees a disabled send state with a consent CTA when consent flag is FALSE"
+  - id: "TC-011"
+    covers: "User can edit the templated message text in the preview modal"
+  - id: "TC-012"
+    covers: "User can view a chronological, immutable audit trail per case"
+  - id: "TC-013"
+    covers: "User cannot edit or delete audit trail entries"
+  - id: "TC-014"
+    covers: "User can filter the audit trail by action type, actor, or date range without a page reload"
+  - id: "TC-015"
+    covers: "User can export the audit trail as a CSV"
+  - id: "TC-016"
+    covers: "User can Reset a case to its seeded baseline state"
+  - id: "TC-017"
+    covers: "User can Clone a case, creating an independent copy with an empty audit trail"
+  - id: "TC-018"
+    covers: "User can replay a scenario from Clone without affecting the original case's audit trail"
+
+# Deliberately NOT yet covered (real gap, matches AC_MAPPING.md's flagged
+# ambiguities — don't add a fake entry here just to make the report green):
+#
+#   - The 4-transition reason_code gate list from the Engineering Spec
+#     (submitted -> needs_documentation, peer_to_peer -> pending_review)
+#     isn't a literal PRD AC line, so mercator.py won't find a PRD match to
+#     cover even once a test exists. This is a known limitation: mercator.py
+#     checks PRD coverage, not Engineering Spec coverage. See "Known
+#     limitations" in MERCATOR_SETUP.md.

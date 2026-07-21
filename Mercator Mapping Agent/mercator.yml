@@ -1,0 +1,39 @@
+name: Mercator — AC Coverage Check
+
+# Runs on every push to any branch and every PR targeting main, so a P0
+# coverage gap is caught the moment it's introduced, not discovered at
+# Day 4 QA. Matches RULES.md's requirement that PRs touching high-risk
+# areas get real scrutiny before merge — this automates the first pass
+# of that scrutiny for acceptance-criteria coverage specifically.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  mercator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Run Mercator coverage check
+        run: |
+          python mercator/mercator.py \
+            --prd docs/PA_Status_Relay_PRD.md \
+            --manifest mercator/test_manifest.yaml
+
+      # If this step fails, the PR shows a red X and the specific P0 gap
+      # is printed in the log above — fix the manifest or the test before
+      # merging, don't override this check without team sign-off (per
+      # RULES.md's two-approval rule for state-machine/audit-trail areas).
