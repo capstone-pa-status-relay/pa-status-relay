@@ -4,7 +4,7 @@
 **Product Requirements Document: Net New Build**
 
 **Build name: Practice-Side PA Status Relay**  
-**Owner: Jillian Krebsbach, Natalie Walker, Chris Wonziack, Lee Mcdonald**  
+**Owner: Jillian Krebsbach, Natalie Walker, Chris Wozniak, Lee Mcdonald**  
 **Date: July 2026**
 
 ════════════════════════════════════════  
