@@ -294,7 +294,7 @@ export function StatusBadge({ status }: { status: PAStatus }) {
 
 **Consent gating:**
 - `consent = TRUE`: Send button enabled. Label: "Confirm and send message"
-- `consent = FALSE`: Send button disabled. Warning banner above button: "Message suppressed — patient has not consented to status updates." CTA inside banner: "Record consent" (button, no live flow in MVP — demo only).
+- `consent = FALSE`: Send button disabled. Warning banner above button: "Consent required — record consent to enable message delivery." CTA inside banner: "Record consent" (button, no live flow in MVP — demo only).
 
 **Footer buttons:**
 - Secondary: "Log status only" (skips message send, sets `message_sent = false`)
@@ -342,7 +342,7 @@ export function StatusBadge({ status }: { status: PAStatus }) {
 - Secondary button: "Log without sending"
 
 **Consent FALSE state:**
-- Warning banner replaces buttons: background `feedback-warning-bg`, text `feedback-warning-text`, border `feedback-warning-border`. Copy: "Message suppressed — record patient consent to enable delivery."
+- Warning banner replaces buttons: background `feedback-warning-bg`, text `feedback-warning-text`, border `feedback-warning-border`. Copy: "Consent required — record consent to enable message delivery."
 - CTA inside banner: "Record consent" (secondary style, no live flow in MVP)
 - Both action buttons disabled and visibly so
 
