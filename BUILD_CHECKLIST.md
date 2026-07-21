@@ -2,7 +2,7 @@
 
 **MVP Scope · 5-Day Demo · AI-Assisted Build**
 **Version: 1.0 | July 2026**
-**Owners: Jillian Krebsbach, Natalie Walker, Chris Wonziack, Lee McDonald**
+**Owners: Jillian Krebsbach, Natalie Walker, Chris Wozniak, Lee McDonald**
 
 ---
 
