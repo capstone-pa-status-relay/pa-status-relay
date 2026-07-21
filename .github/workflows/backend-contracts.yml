@@ -18,5 +18,5 @@ jobs:
         with:
           node-version: 24
 
-      - name: Run status machine contract tests
-        run: node --experimental-strip-types --test tests/statusMachine.test.ts
+      - name: Run backend contract tests
+        run: node --experimental-strip-types --test tests/*.test.ts
