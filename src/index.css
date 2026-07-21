@@ -15,6 +15,52 @@
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  /* ── PA Design System Tokens ─────────────────────────────────── */
+  --pa-primary:       #1B4F72;
+  --pa-primary-hover: #154360;
+  --pa-primary-subtle:#D6E4F0;
+  --pa-surface:       #FFFFFF;
+  --pa-surface-alt:   #F4F6F8;
+  --pa-surface-panel: #EBF0F4;
+  --pa-text-primary:  #1A1F2E;
+  --pa-text-secondary:#4A5568;
+  --pa-text-muted:    #718096;
+  --pa-border:        #E2E8F0;
+
+  /* Status badge tokens */
+  --pa-badge-new-bg:          #E0F2FE;
+  --pa-badge-new-text:        #075985;
+  --pa-badge-new-border:      rgba(7,89,133,0.20);
+  --pa-badge-needs-doc-bg:    #FFEDD5;
+  --pa-badge-needs-doc-text:  #7B4F12;
+  --pa-badge-needs-doc-border:rgba(249,115,22,0.35);
+  --pa-badge-submitted-bg:    #DBEAFE;
+  --pa-badge-submitted-text:  #1E40AF;
+  --pa-badge-submitted-border:rgba(30,64,175,0.20);
+  --pa-badge-pending-bg:      #FEF3C7;
+  --pa-badge-pending-text:    #78350F;
+  --pa-badge-pending-border:  rgba(120,53,15,0.20);
+  --pa-badge-info-bg:         #F3E8FF;
+  --pa-badge-info-text:       #6B21A8;
+  --pa-badge-info-border:     rgba(107,33,168,0.20);
+  --pa-badge-p2p-bg:          #FCE7F3;
+  --pa-badge-p2p-text:        #9D174D;
+  --pa-badge-p2p-border:      rgba(157,23,77,0.25);
+  --pa-badge-approved-bg:     #DCFCE7;
+  --pa-badge-approved-text:   #14532D;
+  --pa-badge-approved-border: rgba(20,83,45,0.20);
+  --pa-badge-denied-bg:       #FEE2E2;
+  --pa-badge-denied-text:     #991B1B;
+  --pa-badge-denied-border:   rgba(153,27,27,0.25);
+  --pa-badge-closed-bg:       #F1F5F9;
+  --pa-badge-closed-text:     #475569;
+  --pa-badge-closed-border:   rgba(71,85,105,0.20);
+
+  /* Demo control badge tokens */
+  --pa-demo-bg:     #FFF7ED;
+  --pa-demo-text:   #92400E;
+  --pa-demo-border: rgba(146,64,14,0.25);
+
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;
