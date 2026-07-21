@@ -1,0 +1,36 @@
+name: Mercator - AC Traceability
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  mercator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Mercator dependency
+        run: pip install pyyaml
+
+      - name: Check AC-to-test traceability
+        run: |
+          python mercator/mercator.py \
+            --prd docs/PA_Status_Relay_PRD.md \
+            --test-dir src \
+            --manifest mercator/test_manifest.yaml \
+            --repo-root .
+
+      # Mercator does not execute tests. Add the project's actual unit,
+      # integration, and end-to-end test commands as separate CI steps/jobs.
