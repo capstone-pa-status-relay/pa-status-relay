@@ -24,7 +24,7 @@ jobs:
       - name: Scan for obvious committed secrets
         shell: bash
         run: |
-          if git grep -n -I -E 'github_pat_|ghp_|gho_|ghu_|ghs_|ghr_|service_role|SUPABASE_SERVICE_ROLE|BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY' -- .; then
+          if git grep -n -I -E 'github_pat_|ghp_|gho_|ghu_|ghs_|ghr_|service_role|SUPABASE_SERVICE_ROLE|BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY' -- . ':(exclude).github/workflows/repo-hygiene.yml'; then
             echo "Potential secret detected. Revoke it and remove it before merging."
             exit 1
           fi
