@@ -1,0 +1,30 @@
+name: Repo hygiene
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Block local env files
+        shell: bash
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.local$|\.development$|\.production$|\.test$)'; then
+            echo "Do not commit local .env files."
+            exit 1
+          fi
+
+      - name: Scan for obvious committed secrets
+        shell: bash
+        run: |
+          if git grep -n -I -E 'github_pat_|ghp_|gho_|ghu_|ghs_|ghr_|service_role|SUPABASE_SERVICE_ROLE|BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY' -- .; then
+            echo "Potential secret detected. Revoke it and remove it before merging."
+            exit 1
+          fi
