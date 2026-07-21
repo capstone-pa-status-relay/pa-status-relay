@@ -165,7 +165,7 @@ Roles in this file:
   - [ ] Label: "Consent required — record consent to enable message delivery."
   - [ ] CTA button present (demo: no live flow behind it)
 - [ ] Audit Trail panel:
-  - [ ] Chronological list of entries with all required fields
+  - [ ] Reverse chronological (most recent first) list of entries with all required fields
   - [ ] Filter by action type, actor, date range — client-side, no page reload
   - [ ] Filter summary label shows when filters are active
   - [ ] Clearing filter restores all entries
