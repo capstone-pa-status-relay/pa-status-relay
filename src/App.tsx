@@ -4,7 +4,7 @@ import {
   Stethoscope, CheckCircle2, XCircle, Lock,
   Search, ChevronRight, Settings, Layers, ShieldAlert,
   X, ChevronDown, Check, MessageSquare, AlertTriangle,
-  Download, ExternalLink,
+  Download, ExternalLink, FolderOpen, SearchX, Plus,
 } from "lucide-react";
 
 // ── Design System: Section 7 Badge Config ────────────────────────────────────
@@ -1171,6 +1171,94 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ── Empty States ─────────────────────────────────────────────────────────────
+
+function EmptyBodyNoCases({ onCreateCase }: { onCreateCase: () => void }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+      <FolderOpen size={40} style={{ color: "#64748B", marginBottom: 12 }} aria-hidden="true" />
+      <span
+        style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 16,
+          fontWeight: 600,
+          lineHeight: "1.35",
+          color: "#0F172A",
+          marginBottom: 8,
+        }}
+      >
+        No cases yet
+      </span>
+      <span
+        style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 14,
+          fontWeight: 400,
+          lineHeight: "1.43",
+          color: "#475569",
+          marginBottom: 16,
+        }}
+      >
+        Add your first case to get started.
+      </span>
+      <button
+        onClick={onCreateCase}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          height: 36,
+          padding: "0 16px",
+          backgroundColor: "var(--pa-primary)",
+          color: "#FFFFFF",
+          border: "none",
+          borderRadius: 6,
+          fontFamily: "Inter, sans-serif",
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: "pointer",
+        }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--pa-primary-hover)")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--pa-primary)")}
+      >
+        <Plus size={15} aria-hidden="true" />
+        Create case
+      </button>
+    </div>
+  );
+}
+
+function EmptyBodyNoResults() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+      <SearchX size={40} style={{ color: "#64748B", marginBottom: 12 }} aria-hidden="true" />
+      <span
+        style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 16,
+          fontWeight: 600,
+          lineHeight: "1.35",
+          color: "#0F172A",
+          marginBottom: 8,
+        }}
+      >
+        No cases match your search.
+      </span>
+      <span
+        style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 14,
+          fontWeight: 400,
+          lineHeight: "1.43",
+          color: "#475569",
+        }}
+      >
+        Try a different name, drug, or case ID.
+      </span>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [activeFilter, setActiveFilter] = useState<PAStatus | "all">("all");
@@ -1216,6 +1304,10 @@ export default function App() {
   function openModal(text: string) {
     setModalMessageText(text);
     setModalOpen(true);
+  }
+
+  function handleCreateCase() {
+    console.log("create case");
   }
 
   const selectedCase = CASES.find((c) => c.id === selectedCaseId) ?? null;
@@ -1409,6 +1501,7 @@ export default function App() {
             }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary)")}
+            onClick={handleCreateCase}
             onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)")}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
@@ -1631,28 +1724,10 @@ export default function App() {
 
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: "48px 16px", textAlign: "center" }}>
-                    <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: "#0F172A",
-                        marginBottom: 4,
-                        fontFamily: "Inter, sans-serif",
-                      }}
-                    >
-                      No cases match your search.
-                    </p>
-                    <p
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 400,
-                        color: "#475569",
-                        fontFamily: "Inter, sans-serif",
-                      }}
-                    >
-                      Try a different name or drug.
-                    </p>
+                  <td colSpan={6}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0" }}>
+                      {search !== "" ? <EmptyBodyNoResults /> : <EmptyBodyNoCases onCreateCase={handleCreateCase} />}
+                    </div>
                   </td>
                 </tr>
               )}
