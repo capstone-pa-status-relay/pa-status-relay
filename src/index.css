@@ -1,0 +1,157 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  /* ── PA Design System Tokens ─────────────────────────────────── */
+  --pa-primary:       #1B4F72;
+  --pa-primary-hover: #154360;
+  --pa-primary-subtle:#D6E4F0;
+  --pa-surface:       #FFFFFF;
+  --pa-surface-alt:   #F4F6F8;
+  --pa-surface-panel: #EBF0F4;
+  --pa-text-primary:  #1A1F2E;
+  --pa-text-secondary:#4A5568;
+  --pa-text-muted:    #718096;
+  --pa-border:        #E2E8F0;
+
+  /* Status badge tokens */
+  --pa-badge-new-bg:          #E0F2FE;
+  --pa-badge-new-text:        #075985;
+  --pa-badge-new-border:      rgba(7,89,133,0.20);
+  --pa-badge-needs-doc-bg:    #FFEDD5;
+  --pa-badge-needs-doc-text:  #7B4F12;
+  --pa-badge-needs-doc-border:rgba(249,115,22,0.35);
+  --pa-badge-submitted-bg:    #DBEAFE;
+  --pa-badge-submitted-text:  #1E40AF;
+  --pa-badge-submitted-border:rgba(30,64,175,0.20);
+  --pa-badge-pending-bg:      #FEF3C7;
+  --pa-badge-pending-text:    #78350F;
+  --pa-badge-pending-border:  rgba(120,53,15,0.20);
+  --pa-badge-info-bg:         #F3E8FF;
+  --pa-badge-info-text:       #6B21A8;
+  --pa-badge-info-border:     rgba(107,33,168,0.20);
+  --pa-badge-p2p-bg:          #FCE7F3;
+  --pa-badge-p2p-text:        #9D174D;
+  --pa-badge-p2p-border:      rgba(157,23,77,0.25);
+  --pa-badge-approved-bg:     #DCFCE7;
+  --pa-badge-approved-text:   #14532D;
+  --pa-badge-approved-border: rgba(20,83,45,0.20);
+  --pa-badge-denied-bg:       #FEE2E2;
+  --pa-badge-denied-text:     #991B1B;
+  --pa-badge-denied-border:   rgba(153,27,27,0.25);
+  --pa-badge-closed-bg:       #F1F5F9;
+  --pa-badge-closed-text:     #475569;
+  --pa-badge-closed-border:   rgba(71,85,105,0.20);
+
+  /* Demo control badge tokens */
+  --pa-demo-bg:     #FFF7ED;
+  --pa-demo-text:   #92400E;
+  --pa-demo-border: rgba(146,64,14,0.25);
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --code-bg: #1f2028;
+    --accent: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+    --social-bg: rgba(47, 48, 58, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  }
+
+  #social .button-icon {
+    filter: invert(1) brightness(2);
+  }
+}
+
+#root {
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
+  }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
+}
