@@ -87,7 +87,7 @@ Running log of locked decisions with rationale and rejected alternatives. Update
 **Date:** July 2026 (Day 1, C7 resolution)
 **Decision:** Single canonical string for the consent=FALSE banner: **"Consent required — record consent to enable message delivery."**
 This string is used in both the StatusDrawer (when consent=FALSE) and the Message Preview Modal (when consent=FALSE). All other variants retired.
-**Rationale:** QA_SCENARIOS.md Scenario 3 Step 2 defines the pass/fail expected output. The QA string is actionable (not a statement of past suppression) and avoids the "suppressed" framing that implies the action already occurred.
+**Rationale:** QA_SCENARIOS.md Scenario 3 Step 2 defines the pass/fail expected output. Chosen string is forward-looking (states what to do) rather than a statement of past suppression, and avoids the suppressed framing that implies the action already occurred. Consistent with QA expected output.
 **Rejected:** "Message suppressed — patient has not consented to status updates." (DESIGN_SYSTEM.md §8b) — past-tense framing, not actionable; "Message suppressed — record patient consent to enable delivery." (DESIGN_SYSTEM.md §8d) — inconsistent with QA expected output.
 
 ### D14 — Reset strategy: snapshot restore
