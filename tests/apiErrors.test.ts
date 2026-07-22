@@ -42,3 +42,29 @@ test("uses 403 for immutable audit trail violations", () => {
     },
   });
 });
+
+test("defines case CRUD errors with the shared response shape", () => {
+  assert.deepEqual(apiError("case_not_found"), {
+    status: 404,
+    body: {
+      error: "case_not_found",
+      message: "Case not found.",
+    },
+  });
+
+  assert.deepEqual(apiError("missing_patient_name"), {
+    status: 400,
+    body: {
+      error: "missing_patient_name",
+      message: "Patient name is required.",
+    },
+  });
+
+  assert.deepEqual(apiError("missing_consent_flag"), {
+    status: 400,
+    body: {
+      error: "missing_consent_flag",
+      message: "Consent flag is required.",
+    },
+  });
+});

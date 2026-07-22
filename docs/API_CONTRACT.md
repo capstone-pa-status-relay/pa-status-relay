@@ -305,7 +305,7 @@ Response `200`:
 }
 ```
 
-Ordering note: Jill flagged audit display as most recent first. Confirm whether API returns reverse chronological order or frontend sorts the fetched array.
+Default ordering: reverse chronological, most recent first. This is locked in D12 in `docs/DECISIONS.md`, so the frontend can render the default audit response without applying its own sort.
 
 ### `GET /api/cases/:id/audit/export`
 
