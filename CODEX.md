@@ -7,14 +7,34 @@ Guidelines for using Codex on this project. Codex work should follow the same pr
 Before backend or integration work, read:
 
 - `CLAUDE.md`
-- `STATE_MACHINE.md`
-- `DECISIONS.md`
-- `BUILD_CHECKLIST.md`
-- `QA_SCENARIOS.md`
+- `docs/STATE_MACHINE.md`
+- `docs/DECISIONS.md`
+- `docs/BUILD_CHECKLIST.md`
+- `docs/QA_SCENARIOS.md`
 - `docs/REGRESSION_TESTS.md`
-- `docs/API_CONTRACT.md`, when present on the active branch
+- `docs/API_CONTRACT.md`
+- `docs/DOC_CONFLICTS.md`, when present on the active branch
 
 If documents conflict, stop and ask the team to resolve the conflict in `DECISIONS.md` before implementation.
+
+## Documentation Source Of Truth
+
+The canonical project documentation lives in `docs/`.
+
+During early setup, the repo had key project documents in the root folder. Later, Natalie's package organized current project documentation into `docs/`, while some root copies remained. Jill's doc updates were merged to `main`, and the matching `docs/` copies were synced afterward, but duplicate root files may still exist temporarily for convenience.
+
+Use `docs/` versions for all project decisions, coding prompts, and contract checks:
+
+- `docs/BUILD_CHECKLIST.md`
+- `docs/DESIGN_SYSTEM.md`
+- `docs/DECISIONS.md`
+- `docs/STATE_MACHINE.md`
+- `docs/QA_SCENARIOS.md`
+- `docs/API_CONTRACT.md`
+- `docs/DOC_CONFLICTS.md`
+- `docs/REGRESSION_TESTS.md`
+
+Do not edit duplicate root copies directly when a matching file exists in `docs/`. The intended cleanup is to keep root focused on entry files such as `README.md`, `CLAUDE.md`, and `CODEX.md`, then replace duplicate root docs with short pointer/link files that direct readers to `docs/`.
 
 ## Codex / Chris Scope
 
@@ -35,12 +55,12 @@ Avoid editing these unless explicitly requested by the team owner:
 - Jill-owned UI/design files
 - Natalie-owned QA, Mercator, and README files
 - Lebert-owned Supabase schema and seed files
-- locked source-of-truth documents such as `STATE_MACHINE.md`
+- locked source-of-truth documents such as `docs/STATE_MACHINE.md`
 
 ## Non-Negotiables
 
-- `STATE_MACHINE.md` is the source of truth for status values, valid transitions, gates, error codes, display labels, and patient-facing messages.
-- Do not change patient-facing message copy unless the team updates `STATE_MACHINE.md`.
+- `docs/STATE_MACHINE.md` is the source of truth for status values, valid transitions, gates, error codes, display labels, and patient-facing messages.
+- Do not change patient-facing message copy unless the team updates `docs/STATE_MACHINE.md`.
 - Do not add PHI, real patient data, secrets, tokens, Supabase keys, passwords, or `.env` files.
 - Audit trail rows are immutable. No update/delete behavior should be introduced for `audit_trail`.
 - Demo controls write to `demo_events`, not `audit_trail`.
