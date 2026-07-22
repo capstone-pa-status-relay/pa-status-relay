@@ -41,15 +41,33 @@ All PRD-derived files have since been rebuilt against the complete document. `QA
 ## 2026-07-22T12:54:32Z
 - Branch: chore/ac-mapping-regression-mercator
 - Decisions source: decisions.md
-- Build: FAIL
-- Tests: FAIL
+- Build: FAIL (environmental)
+- Tests: FAIL (environmental)
 
 ### Mismatches
 - None
 
 ### Failures
-- npm run build failed; see /tmp/chronicle_build.log
-- node --test tests/*.test.ts failed; see /tmp/chronicle_tests.log
+- Sandbox `/tmp` write restriction prevented chronicle log-file creation; this run does not indicate app logic/build/test failures.
+- Superseded by corrected rerun below using writable repo-local log paths.
+
+### Blockers
+- Regression blocker: 74:| TC-034 | Audit display order | **BLOCKED — A-05:** verify whether the authoritative requirement is oldest-first or most-recent-first before finalizing the expected result | P0 |
+- Regression blocker: 91:| TC-041 | API-level immutability | **BLOCKED — A-10:** team must choose either no mutation route (`404/405`) or an explicit rejecting route (`403 audit_immutable`) | P0 |
+- Regression blocker: 101:| TC-046 | Reset | **BLOCKED — A-09/Q3:** confirmation is required and a `demo_events` row is written; exact baseline restoration behavior is finalized after the Reset strategy is logged in `DECISIONS.md` | P0 |
+- Regression blocker: 107:| TC-057 | Message skip behavior | **BLOCKED — A-07:** verify the approved status/audit result when the coordinator skips or closes the message step | P0 |
+
+## 2026-07-22T13:12:18Z
+- Branch: chore/ac-mapping-regression-mercator
+- Decisions source: decisions.md
+- Build: PASS
+- Tests: PASS
+
+### Mismatches
+- None
+
+### Failures
+- None
 
 ### Blockers
 - Regression blocker: 74:| TC-034 | Audit display order | **BLOCKED — A-05:** verify whether the authoritative requirement is oldest-first or most-recent-first before finalizing the expected result | P0 |

@@ -5,8 +5,12 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
 HISTORY_FILE="ac-mapping-history.md"
+LOG_DIR="$ROOT_DIR/.chronicle-logs"
+mkdir -p "$LOG_DIR"
+BUILD_LOG="$LOG_DIR/chronicle_build.log"
+TEST_LOG="$LOG_DIR/chronicle_tests.log"
 DATE_UTC="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-BRANCH_NAME="$(git branch --show-current 2>/dev/null || echo unknown)"
+BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 
 if [[ -f "decisions.md" ]]; then
   DECISIONS_FILE="decisions.md"
@@ -43,18 +47,18 @@ fi
 BUILD_RESULT="NOT_RUN"
 TEST_RESULT="NOT_RUN"
 
-if npm run -s build >/tmp/chronicle_build.log 2>&1; then
+if npm run -s build >"$BUILD_LOG" 2>&1; then
   BUILD_RESULT="PASS"
 else
   BUILD_RESULT="FAIL"
-  FAILURES+=("npm run build failed; see /tmp/chronicle_build.log")
+  FAILURES+=("npm run build failed; see $BUILD_LOG")
 fi
 
-if node --test tests/*.test.ts >/tmp/chronicle_tests.log 2>&1; then
+if node --test tests/*.test.ts >"$TEST_LOG" 2>&1; then
   TEST_RESULT="PASS"
 else
   TEST_RESULT="FAIL"
-  FAILURES+=("node --test tests/*.test.ts failed; see /tmp/chronicle_tests.log")
+  FAILURES+=("node --test tests/*.test.ts failed; see $TEST_LOG")
 fi
 
 {
