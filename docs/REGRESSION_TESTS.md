@@ -106,6 +106,59 @@ Aligned to the transition contract in `STATE_MACHINE.md` and traced to PRD Secti
 | TC-056 | Clone independence replay | Run a transition sequence on a clone, then reopen the source case; source status and source audit trail remain unchanged | P1 |
 | TC-057 | Message skip behavior | **BLOCKED — A-07:** verify the approved status/audit result when the coordinator skips or closes the message step | P0 |
 
+## Backend mutation route matrix
+
+Backend-only contract matrix for the mutation endpoints. This section is the implementation-ready checklist for route handlers and route-level tests. Frontend behavior is intentionally out of scope here.
+
+### `POST /api/cases/:id/transition`
+
+| Test ID | Scenario | Request shape | Expected response | Notes |
+|---|---|---|---|---|
+| BR-TRANS-001 | `new_order` → `needs_documentation` | `to_status = needs_documentation` | `200`; case status updates; exactly one immutable audit row is written | No extra metadata required |
+| BR-TRANS-002 | `new_order` → `submitted` with doc link | `to_status = submitted`, `doc_link` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-003 | `needs_documentation` → `submitted` with doc link | `to_status = submitted`, `doc_link` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-004 | `submitted` → `pending_review` | `to_status = pending_review` | `200`; case status updates; exactly one immutable audit row is written | No extra metadata required |
+| BR-TRANS-005 | `submitted` → `needs_documentation` with reason | `to_status = needs_documentation`, `reason_code` present | `200`; case status updates; exactly one immutable audit row is written | Amber return path |
+| BR-TRANS-006 | `pending_review` → `approved` | `to_status = approved` | `200`; case status updates; exactly one immutable audit row is written | No extra metadata required |
+| BR-TRANS-007 | `pending_review` → `denied` with reason | `to_status = denied`, `reason_code` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-008 | `pending_review` → `info_request` with reason | `to_status = info_request`, `reason_code` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-009 | `pending_review` → `peer_to_peer` | `to_status = peer_to_peer` | `200`; case status updates; exactly one immutable audit row is written | No extra metadata required |
+| BR-TRANS-010 | `info_request` → `pending_review` with reason | `to_status = pending_review`, `reason_code` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-011 | `info_request` → `submitted` with doc link | `to_status = submitted`, `doc_link` present | `200`; case status updates; exactly one immutable audit row is written | Re-submit gate is satisfied |
+| BR-TRANS-012 | `peer_to_peer` → `pending_review` with reason | `to_status = pending_review`, `reason_code` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-013 | `approved` → `closed` with appointment link | `to_status = closed`, `appointment_link` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-014 | `denied` → `closed` with next step note | `to_status = closed`, `next_step_note` present | `200`; case status updates; exactly one immutable audit row is written | Gate is satisfied |
+| BR-TRANS-015 | `peer_to_peer` → `approved` | `to_status = approved` | `400 invalid_transition` with `{ "error": "invalid_transition", "message": "This status transition is not allowed." }` | MVP hard block |
+| BR-TRANS-016 | `peer_to_peer` → `denied` | `to_status = denied` | `400 invalid_transition` with `{ "error": "invalid_transition", "message": "This status transition is not allowed." }` | MVP hard block |
+| BR-TRANS-017 | `denied` → `submitted` | `to_status = submitted` | `400 invalid_transition` with `{ "error": "invalid_transition", "message": "This status transition is not allowed." }` | MVP hard block |
+| BR-TRANS-018 | `closed` → any status | `to_status = any non-empty status` | `400 invalid_transition` with `{ "error": "invalid_transition", "message": "This status transition is not allowed." }` | Terminal state |
+| BR-TRANS-019 | Missing `doc_link` on doc-gated transition | `to_status = submitted` from `new_order`, `needs_documentation`, or `info_request` without `doc_link` | `400 missing_doc_link` with locked message text | Covers all doc-link gates |
+| BR-TRANS-020 | Missing `reason_code` on reason-gated transition | `to_status = needs_documentation`, `denied`, `info_request`, or `pending_review` from a gated source without `reason_code` | `400 missing_reason_code` with locked message text | Covers all reason-code gates |
+| BR-TRANS-021 | Missing `appointment_link` on approved close | `from_status = approved`, `to_status = closed` without `appointment_link` | `400 missing_appointment` with locked message text | Closing approved cases |
+| BR-TRANS-022 | Missing `next_step_note` on denied close | `from_status = denied`, `to_status = closed` without `next_step_note` | `400 missing_next_step` with locked message text | Closing denied cases |
+| BR-TRANS-023 | Consent false transition payload | Any valid transition where `consent_flag = false` on the case | `200`; `message_sent = false`; no patient-facing message is recorded as sent | Exact suppression storage shape follows A-08 |
+
+### `POST /api/cases/:id/reset`
+
+| Test ID | Scenario | Request shape | Expected response | Notes |
+|---|---|---|---|---|
+| BR-RESET-001 | Demo reset confirmation accepted | `{ "confirm": true }` | `200`; case returns to seeded baseline; one `demo_events` row with `event_type = reset` is written | Reset strategy is still subject to Q3 |
+
+### `POST /api/cases/:id/clone`
+
+| Test ID | Scenario | Request shape | Expected response | Notes |
+|---|---|---|---|---|
+| BR-CLONE-001 | Clone creates independent copy | No request body required by the contract | `201`; new case has `status = new_order`, empty audit trail, copies `patient_name` + `consent_flag`; source case gets one `demo_events` row with `event_type = clone` | Clone must not mutate the original case's audit trail |
+
+### Route-level contract assertions
+
+| Test ID | Assertion | Expected result |
+|---|---|---|
+| BR-ASSERT-001 | Every error response uses the shared body shape | `{ "error": "...", "message": "..." }` exactly |
+| BR-ASSERT-002 | Every invalid transition is rejected before mutation | No case update, no audit row written |
+| BR-ASSERT-003 | Every successful transition writes exactly one audit row | One immutable `audit_trail` row only |
+| BR-ASSERT-004 | Demo controls stay separate from audit history | Reset/Clone write only to `demo_events` |
+
 ## End-to-end scenario coverage (5 seed cases)
 
 | # | Case | Expected result | Priority |
