@@ -96,6 +96,12 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rationale:** Snapshot restore is more reliable than re-running seed inserts because demo cases may be edited during testing. It gives Reset one clear target state per case while preserving audit immutability.
 **Rejected:** Option B, re-running seed inserts for the case_id — rejected because it is more fragile after edits, can create idempotency problems, and risks accidentally changing audit evidence instead of only restoring the case baseline.
 
+### D15 — message_custom flag: string comparison at confirm time
+**Date:** July 2026 (Day 2, Q8 resolution)
+**Decision:** Compare final confirmed message text against the locked template string for the target status at modal confirm time. Exact match → `message_custom = false`. Any difference → `message_custom = true`.
+**Rationale:** Audit flag reflects the final message actually sent, not editor behavior. Semantically accurate and straightforward to implement — one string comparison before firing `POST /transition`.
+**Rejected:** Tracking whether the textarea was ever touched (message_custom = true on any edit regardless of final value) — rejected because it misrepresents what was actually sent to the patient.
+
 ---
 
 ## Open Items (resolve and move to Locked Decisions above)
@@ -109,13 +115,5 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 
 ---
 
-### Q8 — message_custom flag on revert
-**Status:** Open — resolve at Day 3 morning sync
-**Question:** If a coordinator edits the message text in the preview modal and then reverts to the original template text before confirming, is message_custom = TRUE or FALSE in the audit row?
-**Owner:** Backend dev (Chris) + Frontend dev (Jill)
-**Note:** Decide this at the Day 3 integration sync before either side builds the modal confirm logic.
-**Resolution:** *(fill in)*
-
----
 
 *DECISIONS.md · v2.0 · July 2026 · Update when open items resolve — do not close silently*
