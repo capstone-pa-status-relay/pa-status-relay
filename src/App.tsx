@@ -10,7 +10,6 @@ import {
   getValidTransitions,
   getTransitionGate,
   getPatientMessage,
-  STATUS_LABELS,
   type PaStatus,
 } from "./backend/statusMachine";
 
@@ -62,14 +61,14 @@ function StatusBadge({ status, size = "default" }: { status: PAStatus; size?: "d
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
 const CASES_SEED = [
-  { id: 1, name: "Marcus Okafor",     drug: "Pembrolizumab", status: "approved"           as PAStatus, updated: "Jul 18, 2026 9:14 AM",  consent_flag: true  },
-  { id: 2, name: "Tanya Hargrove",    drug: "Rituximab",     status: "peer_to_peer"        as PAStatus, updated: "Jul 19, 2026 2:30 PM",  consent_flag: true  },
-  { id: 3, name: "Rafael Castellano", drug: "Bevacizumab",   status: "denied"              as PAStatus, updated: "Jul 20, 2026 8:02 AM",  consent_flag: true  },
-  { id: 4, name: "Linh Nguyen",       drug: "Nivolumab",     status: "submitted"           as PAStatus, updated: "Jul 20, 2026 10:45 AM", consent_flag: false },
-  { id: 5, name: "David Mbeki",       drug: "Trastuzumab",   status: "pending_review"      as PAStatus, updated: "Jul 19, 2026 11:20 AM", consent_flag: false },
-  { id: 6, name: "Anna Kowalski",     drug: "Ipilimumab",    status: "needs_documentation" as PAStatus, updated: "Jul 17, 2026 3:55 PM",  consent_flag: false },
-  { id: 7, name: "Pedro Reyes",       drug: "Atezolizumab",  status: "info_request"        as PAStatus, updated: "Jul 20, 2026 7:30 AM",  consent_flag: true  },
-  { id: 8, name: "Sara Johansson",    drug: "Durvalumab",    status: "closed"              as PAStatus, updated: "Jul 15, 2026 4:00 PM",  consent_flag: true  },
+  { id: "1", name: "Marcus Okafor",     drug: "Pembrolizumab", status: "approved"           as PAStatus, updated: "Jul 18, 2026 9:14 AM",  consent_flag: true  },
+  { id: "2", name: "Tanya Hargrove",    drug: "Rituximab",     status: "peer_to_peer"        as PAStatus, updated: "Jul 19, 2026 2:30 PM",  consent_flag: true  },
+  { id: "3", name: "Rafael Castellano", drug: "Bevacizumab",   status: "denied"              as PAStatus, updated: "Jul 20, 2026 8:02 AM",  consent_flag: true  },
+  { id: "4", name: "Linh Nguyen",       drug: "Nivolumab",     status: "submitted"           as PAStatus, updated: "Jul 20, 2026 10:45 AM", consent_flag: false },
+  { id: "5", name: "David Mbeki",       drug: "Trastuzumab",   status: "pending_review"      as PAStatus, updated: "Jul 19, 2026 11:20 AM", consent_flag: false },
+  { id: "6", name: "Anna Kowalski",     drug: "Ipilimumab",    status: "needs_documentation" as PAStatus, updated: "Jul 17, 2026 3:55 PM",  consent_flag: false },
+  { id: "7", name: "Pedro Reyes",       drug: "Atezolizumab",  status: "info_request"        as PAStatus, updated: "Jul 20, 2026 7:30 AM",  consent_flag: true  },
+  { id: "8", name: "Sara Johansson",    drug: "Durvalumab",    status: "closed"              as PAStatus, updated: "Jul 15, 2026 4:00 PM",  consent_flag: true  },
 ];
 
 const ALL_STATUSES = Object.keys(BADGE_CONFIG) as PAStatus[];
@@ -1501,7 +1500,11 @@ export default function App() {
   function toggleCheck(id: string) {
     setChecked((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -1812,7 +1815,7 @@ export default function App() {
 
             <tbody>
               {filtered.map((c, idx) => {
-                const isHover = c.id === 2;
+                const isHover = c.id === "2";
                 const isEven = idx % 2 === 1;
                 const rowBg = isHover ? "#F1F5F9" : isEven ? "#F1F5F9" : "#FFFFFF";
 
