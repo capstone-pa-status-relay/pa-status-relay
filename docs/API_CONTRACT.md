@@ -205,6 +205,38 @@ Response `200`:
 }
 ```
 
+### `PATCH /api/cases/:id/consent`
+
+Updates the case consent flag. This does not retroactively send messages or modify prior audit rows. Any prior transition with `message_sent = false` remains unchanged; message delivery can only happen on a later transition.
+
+Request:
+
+```json
+{
+  "consent_flag": true
+}
+```
+
+Response `200`:
+
+```json
+{
+  "case": {
+    "id": "case_001",
+    "status": "pending_review",
+    "consent_flag": true,
+    "updated_at": "2026-07-21T15:00:00Z"
+  }
+}
+```
+
+Required behavior:
+
+- `consent_flag` is required and must be boolean.
+- Return `400 missing_consent_flag` if absent or invalid.
+- Do not write to `audit_trail` for prior messages.
+- Do not retroactively send messages for prior status changes.
+
 ### `POST /api/cases/:id/transition`
 
 Commits a status transition and writes an audit row.

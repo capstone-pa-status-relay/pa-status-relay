@@ -73,6 +73,14 @@ export type GetCaseResponse = {
   case: CaseDetail;
 };
 
+export type UpdateCaseConsentRequest = {
+  consent_flag: boolean;
+};
+
+export type UpdateCaseConsentResponse = {
+  case: Pick<CaseSummary, "id" | "status" | "consent_flag" | "updated_at">;
+};
+
 export type TransitionCaseRequest = {
   to_status: PaStatus;
   doc_link?: string | null;
