@@ -409,7 +409,6 @@ Resolve or confirm these before implementation:
 - Q1 hosting platform
 - Q6 `actor_label` source
 - Q8 `message_custom` behavior if edited text is reverted before confirmation
-- Whether audit API sorts most recent first or frontend sorts client-side
 - Whether consent false uses a separate audit row with `action = message_suppressed`, or a transition audit row with action/message fields that expose suppression
 - Final Supabase schema field names from Lebert before API code starts
 
