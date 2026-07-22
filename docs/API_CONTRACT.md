@@ -112,6 +112,8 @@ Final field names must match Lebert's Supabase schema once locked.
 
 ### Demo Event
 
+Supabase stores demo event time as `timestamp`; API responses expose it as `created_at`.
+
 ```json
 {
   "id": "event_001",
