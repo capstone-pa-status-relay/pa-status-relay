@@ -61,7 +61,7 @@ function StatusBadge({ status, size = "default" }: { status: PAStatus; size?: "d
 }
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
-const CASES = [
+const CASES_SEED = [
   { id: 1, name: "Marcus Okafor",     drug: "Pembrolizumab", status: "approved"           as PAStatus, updated: "Jul 18, 2026 9:14 AM",  consent_flag: true  },
   { id: 2, name: "Tanya Hargrove",    drug: "Rituximab",     status: "peer_to_peer"        as PAStatus, updated: "Jul 19, 2026 2:30 PM",  consent_flag: true  },
   { id: 3, name: "Rafael Castellano", drug: "Bevacizumab",   status: "denied"              as PAStatus, updated: "Jul 20, 2026 8:02 AM",  consent_flag: true  },
@@ -365,6 +365,7 @@ function MessagePreviewModal({
   onConfirm,
   onLogWithoutSending,
   onClose,
+  onRecordConsent,
 }: {
   consentActive: boolean;
   messageText: string;
@@ -372,6 +373,7 @@ function MessagePreviewModal({
   onConfirm: () => void;
   onLogWithoutSending: () => void;
   onClose: () => void;
+  onRecordConsent?: () => void;
 }) {
   return (
     <ModalShell>
@@ -493,7 +495,7 @@ function MessagePreviewModal({
               >
                 Consent required — record consent to enable message delivery.
               </p>
-              <SecondaryButton>Record consent</SecondaryButton>
+              <SecondaryButton onClick={onRecordConsent}>Record consent</SecondaryButton>
             </div>
           </div>
         )}
@@ -1305,16 +1307,178 @@ function EmptyBodyNoResults() {
   );
 }
 
+// ── Create Case Modal ─────────────────────────────────────────────────────────
+function CreateCaseModal({
+  onSubmit,
+  onClose,
+}: {
+  onSubmit: (patientName: string, consentFlag: boolean) => void;
+  onClose: () => void;
+}) {
+  const [patientName, setPatientName] = useState("");
+  const [consentFlag, setConsentFlag] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+
+  const nameEmpty = patientName.trim() === "";
+  const showNameError = nameTouched && nameEmpty;
+
+  return (
+    <ModalShell>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "20px 20px 0",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: "1.35",
+            color: DS.textPrimary,
+            margin: 0,
+          }}
+        >
+          Create case
+        </h2>
+        <button
+          aria-label="Close modal"
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            color: DS.textMuted,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 4,
+          }}
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Patient name */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label
+            htmlFor="create-patient-name"
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: DS.textPrimary,
+              lineHeight: "1.4",
+              fontFamily: "Inter, sans-serif",
+            }}
+          >
+            Patient name
+          </label>
+          <input
+            id="create-patient-name"
+            type="text"
+            value={patientName}
+            onChange={(e) => setPatientName(e.target.value)}
+            placeholder="Full name"
+            style={{
+              width: "100%",
+              backgroundColor: "#FFFFFF",
+              border: `1px solid ${showNameError ? "#DC2626" : DS.borderInput}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              fontSize: 14,
+              fontWeight: 400,
+              lineHeight: "1.43",
+              color: DS.textPrimary,
+              fontFamily: "Inter, sans-serif",
+              boxSizing: "border-box",
+              outline: "none",
+            }}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+            onBlur={(e) => {
+              setNameTouched(true);
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          />
+          {showNameError && (
+            <span
+              role="alert"
+              style={{
+                fontSize: 12,
+                fontWeight: 400,
+                color: "#DC2626",
+                lineHeight: "1.4",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Patient name is required.
+            </span>
+          )}
+        </div>
+
+        {/* Consent toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <input
+            type="checkbox"
+            id="create-consent-flag"
+            checked={consentFlag}
+            onChange={(e) => setConsentFlag(e.target.checked)}
+            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--pa-primary)" }}
+          />
+          <label
+            htmlFor="create-consent-flag"
+            style={{
+              fontSize: 14,
+              fontWeight: 400,
+              color: DS.textPrimary,
+              lineHeight: "1.43",
+              fontFamily: "Inter, sans-serif",
+              cursor: "pointer",
+            }}
+          >
+            Patient has given consent
+          </label>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 8,
+          padding: "0 20px 20px",
+        }}
+      >
+        <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+        <PrimaryButton
+          disabled={nameEmpty}
+          onClick={() => onSubmit(patientName.trim(), consentFlag)}
+        >
+          Create case
+        </PrimaryButton>
+      </div>
+    </ModalShell>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [activeFilter, setActiveFilter] = useState<PAStatus | "all">("all");
   const [search, setSearch] = useState("");
-  const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [checked, setChecked] = useState<Set<string>>(new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedCaseId, setSelectedCaseId] = useState<number | null>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessageText, setModalMessageText] = useState(MESSAGE_COPY);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [showCreateCase, setShowCreateCase] = useState(false);
+  const [cases, setCases] = useState(CASES_SEED);
 
   useEffect(() => {
     if (!document.querySelector('link[data-pa-font]')) {
@@ -1327,14 +1491,14 @@ export default function App() {
     }
   }, []);
 
-  const filtered = CASES.filter((c) => {
+  const filtered = cases.filter((c) => {
     const matchStatus = activeFilter === "all" || c.status === activeFilter;
     const q = search.toLowerCase();
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.drug.toLowerCase().includes(q);
     return matchStatus && matchSearch;
   });
 
-  function toggleCheck(id: number) {
+  function toggleCheck(id: string) {
     setChecked((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -1342,7 +1506,7 @@ export default function App() {
     });
   }
 
-  function openDrawer(id: number) {
+  function openDrawer(id: string) {
     setSelectedCaseId(id);
     setDrawerOpen(true);
   }
@@ -1353,10 +1517,36 @@ export default function App() {
   }
 
   function handleCreateCase() {
-    console.log("create case");
+    setShowCreateCase(true);
   }
 
-  const selectedCase = CASES.find((c) => c.id === selectedCaseId) ?? null;
+  function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
+    console.log("create case", { patientName, consentFlag });
+    setShowCreateCase(false);
+  }
+
+  async function handleConsentUpdate(id: string) {
+    try {
+      const res = await fetch(`/api/cases/${id}/consent`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consent_flag: true }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error(err.error, err.message);
+        return;
+      }
+      const data = await res.json();
+      setCases((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, consent_flag: data.case.consent_flag as boolean } : c)),
+      );
+    } catch (err) {
+      console.error("consent update failed", err);
+    }
+  }
+
+  const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
 
   return (
     <div
@@ -1392,6 +1582,19 @@ export default function App() {
         />
       )}
 
+      {/* Create case modal overlay */}
+      {showCreateCase && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
+        >
+          <CreateCaseModal
+            onSubmit={handleCreateCaseSubmit}
+            onClose={() => setShowCreateCase(false)}
+          />
+        </div>
+      )}
+
       {/* Modal overlay — above drawer */}
       {modalOpen && (
         <div
@@ -1412,6 +1615,7 @@ export default function App() {
               setDrawerOpen(false);
             }}
             onClose={() => setModalOpen(false)}
+            onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
           />
         </div>
       )}
@@ -1676,7 +1880,7 @@ export default function App() {
                       cursor: "pointer",
                     }}
                     className="transition-colors duration-75 group"
-                    onClick={() => openDrawer(c.id)}
+                    onClick={() => openDrawer(String(c.id))}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#F1F5F9";
                     }}
@@ -1688,13 +1892,13 @@ export default function App() {
                     <td style={{ padding: "12px 16px", width: 40 }}>
                       <button
                         className="flex items-center justify-center focus:outline-none rounded"
-                        style={{ width: 16, height: 16, color: checked.has(c.id) ? "#2563EB" : "#CBD5E1" }}
-                        onClick={(e) => { e.stopPropagation(); toggleCheck(c.id); }}
+                        style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "#2563EB" : "#CBD5E1" }}
+                        onClick={(e) => { e.stopPropagation(); toggleCheck(String(c.id)); }}
                         aria-label={`Select ${c.name}`}
                         onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
                         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
-                        {checked.has(c.id)
+                        {checked.has(String(c.id))
                           ? <CheckCircle2 size={16} aria-hidden="true" />
                           : <div style={{ width: 16, height: 16, border: "1.5px solid #CBD5E1", borderRadius: 3 }} />
                         }
@@ -1836,7 +2040,7 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => { setSelectedCaseId(1); setDrawerOpen(true); }}
+              onClick={() => { setSelectedCaseId("1"); setDrawerOpen(true); }}
               className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
               style={{
                 backgroundColor: "#FFFFFF",
