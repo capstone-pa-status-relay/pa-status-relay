@@ -7,16 +7,37 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build outputs
 dist
 dist-ssr
+build/
+coverage/
+
+# Local environment files
+.env
+.env.*
+!.env.example
 *.local
+
+# Local databases and generated data
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets and private keys
+*.pem
+*.key
+*.p12
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
