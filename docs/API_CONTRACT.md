@@ -333,6 +333,8 @@ Rules:
 
 Demo-only endpoint. Restores a case to its seeded baseline state and writes a `demo_events` row.
 
+Locked reset strategy: Option A snapshot restore. Each seed/demo case must have a baseline snapshot available to the backend. Reset restores case fields from that snapshot, preserves existing `audit_trail` rows, and records the reset only in `demo_events`.
+
 Request:
 
 ```json
@@ -359,7 +361,7 @@ Response `200`:
 }
 ```
 
-Open decision: reset strategy is Q3 in `DECISIONS.md`.
+Reset strategy is locked in D14 in `docs/DECISIONS.md`.
 
 ### `POST /api/cases/:id/clone`
 
@@ -405,7 +407,6 @@ Response `201`:
 Resolve or confirm these before implementation:
 
 - Q1 hosting platform
-- Q3 reset strategy
 - Q6 `actor_label` source
 - Q8 `message_custom` behavior if edited text is reverted before confirmation
 - Whether audit API sorts most recent first or frontend sorts client-side
