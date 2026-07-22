@@ -3,6 +3,9 @@ import type { TransitionErrorCode } from "./statusMachine.ts";
 export type ApiErrorCode =
   | TransitionErrorCode
   | "audit_immutable"
+  | "case_not_found"
+  | "missing_consent_flag"
+  | "missing_patient_name"
   | "unauthorized";
 
 export type ApiErrorBody = {
@@ -22,6 +25,9 @@ export const API_ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   missing_appointment: "An appointment link is required to close an approved case.",
   missing_next_step: "A next-step note is required to close a denied case.",
   audit_immutable: "Audit trail entries cannot be edited or deleted.",
+  case_not_found: "Case not found.",
+  missing_consent_flag: "Consent flag is required.",
+  missing_patient_name: "Patient name is required.",
   unauthorized: "You are not authorized to perform this action.",
 };
 
@@ -32,6 +38,9 @@ export const DEFAULT_ERROR_STATUS: Record<ApiErrorCode, ApiErrorResponse["status
   missing_appointment: 400,
   missing_next_step: 400,
   audit_immutable: 403,
+  case_not_found: 404,
+  missing_consent_flag: 400,
+  missing_patient_name: 400,
   unauthorized: 401,
 };
 
