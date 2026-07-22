@@ -28,7 +28,7 @@ Bug severity:
 | 4 | Click "Submitted" | Message preview modal opens. Message text: "Your PA request has been submitted and is under insurance review." Send button enabled (consent = TRUE). |
 | 5 | Confirm send in modal | Modal closes. Status chip updates to "Submitted". Audit row appears within 500ms: from_status = new_order, to_status = submitted, message_sent = TRUE. |
 | 6 | Transition to Pending Review | Message preview modal opens. Message: "Your insurance is reviewing your request. We'll contact you when there's a decision." Confirm. |
-| 7 | Audit trail check | Two entries visible. Chronological order. No edit or delete controls present. |
+| 7 | Audit trail check | Two entries visible. Reverse chronological order (most recent first). No edit or delete controls present. |
 | 8 | Transition to Approved | No pre-condition required. Modal: "Your treatment is approved. Scheduling will contact you next." Confirm. |
 | 9 | Attempt transition to Closed without appointment_link | Button disabled. Tooltip: "An appointment link is required to close an approved case." |
 | 10 | Enter appointment_link, transition to Closed | Modal: "Your authorization case is complete. For questions, contact [office #]." Confirm. |
@@ -102,7 +102,7 @@ Bug severity:
 
 | Step | Action | Expected output |
 |---|---|---|
-| 1 | Open Case 5 | Status chip shows "Peer-to-Peer". Only "Pending Review" is shown as an available transition. "Approved" and "Denied" buttons are absent or disabled. |
+| 1 | Open Case 5 | Status chip shows "Peer-to-Peer". Only "Pending Review" is shown as an available transition. "Approved" and "Denied" buttons are disabled (not hidden). |
 | 2 | Verify "Approved" and "Denied" are not selectable | Buttons disabled (not hidden). Tooltip if hovered: explains MVP constraint. |
 | 3 | Attempt transition to Approved via API directly (if testable) | API returns 400: `{ "error": "invalid_transition", "message": "..." }`. Confirms enforcement is at API level, not just UI. |
 | 4 | Enter reason_code, transition to Pending Review | Modal: "Your insurance is reviewing your request. We'll contact you when there's a decision." Confirm. Audit row: from_status = peer_to_peer, to_status = pending_review. |

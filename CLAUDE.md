@@ -4,30 +4,19 @@ Behavioral guidelines for Claude when working on this project. These rules merge
 
 **Read these companion files before starting any session:**
 - `docs/STATE_MACHINE.md` — authoritative transition table, pre-condition gates, error codes, patient message copy, display labels. Source of truth for both API and UI.
-- `docs/DESIGN_SYSTEM.md` — token tables, typography, spacing, component patterns. **Do not reference until all sections are marked LOCKED.**
+- `docs/DESIGN_SYSTEM.md` — token tables, typography, spacing, component patterns. All sections are LOCKED — safe to reference.
 - `docs/DECISIONS.md` — locked decisions with rationale and rejected alternatives. Check here before making a structural choice.
 - `docs/QA_SCENARIOS.md` — 5 scripted demo scenarios with step-by-step expected outputs. Know the starting states before touching any demo-path code.
 - `docs/BUILD_CHECKLIST.md` — day-by-day task list with owners and verification steps.
-- `docs/DOC_CONFLICTS.md` — documentation conflict audit and resolution notes, when present.
+- `docs/DOC_CONFLICTS.md` — documentation conflict audit and resolution notes.
+- `docs/ui-design-SKILL-PA-Status-Relay.md` — token system, component patterns, copy rules, and engineering floor for the frontend.
+- `docs/laws-of-ux-SKILL-PA-Status-Relay.md` — UX law applications per surface. Consult when designing or reviewing any component.
 
 ## Documentation Source Of Truth
 
 The canonical project documentation lives in `docs/`.
 
-During early setup, the repo had key project documents in the root folder. Later, Natalie’s package organized current project documentation into `docs/`, while some root copies remained. Jill’s doc updates were merged to `main`, and the matching `docs/` copies were synced afterward, but duplicate root files may still exist temporarily for convenience.
-
-Use `docs/` versions for all project decisions, Claude prompts, coding work, and contract checks:
-
-- `docs/BUILD_CHECKLIST.md`
-- `docs/DESIGN_SYSTEM.md`
-- `docs/DECISIONS.md`
-- `docs/STATE_MACHINE.md`
-- `docs/QA_SCENARIOS.md`
-- `docs/API_CONTRACT.md`
-- `docs/DOC_CONFLICTS.md`
-- `docs/REGRESSION_TESTS.md`
-
-Do not edit duplicate root copies directly when a matching file exists in `docs/`. The intended cleanup is to keep root focused on entry files such as `README.md`, `CLAUDE.md`, and `CODEX.md`, then replace duplicate root docs with short pointer/link files that direct readers to `docs/`.
+Use `docs/` versions for all project decisions, Claude prompts, coding work, and contract checks. Duplicate root docs are pointer files only and should not be edited directly when a matching file exists in `docs/`.
 
 ---
 
@@ -47,6 +36,8 @@ Before implementing anything:
 **The state machine is the highest-risk contract in this build.** Every valid transition, required field, and error code is defined in `docs/STATE_MACHINE.md`. Feed that file directly into Claude Code or Codex as a prompt input when building any transition logic. Do not rely on either tool inferring the transitions from context. Both the API (Codex) and the UI (Claude Code) must enforce the same table — a discrepancy breaks the demo in a way that's hard to debug under sprint pressure.
 
 **The audit trail is immutable by design.** No UPDATE or DELETE on `audit_trail` rows — ever. The RLS policy enforces this at the database level; the API enforces it at the endpoint level; the frontend enforces it by never rendering edit or delete controls. All three layers must agree. This is the primary trust signal for reviewers on Day 5.
+
+**The transition API fires at modal confirmation, not at StatusDrawer button click.** "Confirm and send" in the StatusDrawer opens the modal; `POST /transition` fires when the coordinator confirms in the modal. "Log status only" bypasses the modal and fires `POST /transition` directly with `message_sent = false`. See D11 in `docs/DECISIONS.md`.
 
 **Patient-facing message copy is locked.** The nine status-to-message mappings in `docs/STATE_MACHINE.md` are the authoritative strings. Do not paraphrase, shorten, or reword them in code. No clinical abbreviations, payer jargon, or authorization reference numbers may appear in any patient-facing string. The Denied message must not include denial reason code or clinical rationale.
 
@@ -74,7 +65,7 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 
 **MVP scope is fixed.** Do not implement: live EHR or payer integrations, production SMS or message delivery, the appeal path (Denied → Submitted), direct Peer-to-Peer resolution (P2P → Approved or Denied), multi-org support, or any PHI handling. All explicitly deferred to v2.
 
-**Design tokens only.** Once `docs/DESIGN_SYSTEM.md` is locked, use CSS custom properties from that file for all visual decisions. Do not introduce new hex values, new component libraries, or override established tokens. Until it's locked, coordinate with the frontend lead before introducing any visual values.
+**Design tokens only.** `docs/DESIGN_SYSTEM.md` is locked. Use CSS custom properties from that file for all visual decisions. Do not introduce new hex values, new component libraries, or override established tokens.
 
 **TypeScript only.** No JavaScript-only patterns. All shared utilities must be typed.
 
@@ -110,6 +101,8 @@ The test: every changed line should trace directly to the user's request.
 
 **Error response shape is shared and must be consistent.** Every API error uses: `{ "error": "error_code", "message": "human-readable string" }`. Named error codes are defined in `docs/STATE_MACHINE.md`. Do not invent a new format or new codes.
 
+**Use `actor_id` and `actor_label`, never `user_id`.** The Engineering Spec is authoritative on field naming. `actor_label` is hardcoded as "Demo Coordinator" for MVP (D09 in `docs/DECISIONS.md`).
+
 ---
 
 ## 4. Goal-Driven Execution
@@ -131,7 +124,7 @@ For multi-step tasks, state a brief plan:
 
 ### Build phases
 
-**Day 1 — Foundation:** Supabase schema + enum + RLS + seed data (5 cases) + auth flow + Case List UI (against hardcoded mock array).
+**Day 1 — Foundation:** Supabase schema + enum + RLS + seed data (5 cases) + auth flow + Case List UI (against hardcoded mock array). ✓ Complete.
 
 **Day 2 — Core Flows:** Case List wired to Supabase + Case Details UI + state machine button logic + transition API (all valid/invalid transitions) + Reset + Clone demo controls.
 
@@ -158,11 +151,11 @@ For multi-step tasks, state a brief plan:
 
 | Surface | Owner | Tool |
 |---|---|---|
-| Transition API + RLS + schema | Backend Dev | Codex |
-| State machine UI + button logic | Frontend Dev | Claude Code |
-| Audit trail display + filter logic | Frontend Dev | Claude Code |
-| Message preview modal + consent logic | Frontend Dev + Backend Dev | Claude Code + Codex |
-| Demo controls (Reset, Clone, Re-open) | Backend Dev | Codex |
+| Transition API + RLS + schema | Chris (Backend Dev) | Codex |
+| State machine UI + button logic | Jill (Frontend Dev) | Claude Code |
+| Audit trail display + filter logic | Jill (Frontend Dev) | Claude Code |
+| Message preview modal + consent logic | Jill + Chris | Claude Code + Codex |
+| Demo controls (Reset, Clone, Re-open) | Chris (Backend Dev) | Codex |
 
 ---
 
@@ -173,9 +166,10 @@ The audit trail is the primary evidence of workflow integrity for reviewers. Tre
 - Every successful status transition writes one row to `audit_trail` within 500ms.
 - No UPDATE or DELETE — enforced by RLS, API (returns 403), and frontend (no controls rendered).
 - Demo controls write to `demo_events` only. CSV export pulls from `audit_trail` only.
+- Audit trail renders **reverse chronological (most recent first)** everywhere.
 - Consent gating rules:
-  - `consent = TRUE` → preview modal, send enabled, `message_sent = TRUE` on confirm
-  - `consent = FALSE` → preview modal, send disabled, `message_suppressed` audit event, `message_sent = FALSE`
+  - `consent = TRUE` → preview modal opens, send enabled, `message_sent = TRUE` on confirm
+  - `consent = FALSE` → preview modal opens, send disabled, banner: "Consent required — record consent to enable message delivery.", `message_suppressed` audit event logged, `message_sent = FALSE`
   - `consent FALSE → TRUE` mid-case → no retroactive sends, next transition only
 
 ---
@@ -203,32 +197,27 @@ All detailed contract content lives in `docs/STATE_MACHINE.md`. This section sta
 | Layer | Choice |
 |---|---|
 | Backend / DB | Supabase (Postgres + Auth + RLS) |
-| Backend tooling | Codex |
-| Frontend tooling | Claude Code |
-| Frontend framework | **[TO FILL IN — Q2 in docs/DECISIONS.md]** |
-| Styling | CSS custom properties via `docs/DESIGN_SYSTEM.md` — **lock on Day 0 before any frontend CSS** |
-| Hosting | **[TO FILL IN — Q1 in docs/DECISIONS.md]** |
+| Backend tooling | Codex (Chris only) |
+| Frontend tooling | Claude Code (Jill) |
+| Frontend framework | React 18 + Vite + TypeScript |
+| Styling | CSS custom properties via `docs/DESIGN_SYSTEM.md` (LOCKED) |
+| Hosting | Vercel |
 | Auth | Supabase email/password |
 | Data | Mock only — no EHR, no payer integrations |
-| Browser targets | **[TO FILL IN — Q5 in docs/DECISIONS.md]** |
+| Browser targets | Chrome only |
 | Concurrency | ~2–4 users (internal demo only) |
 
 ---
 
 ## 9. Open Items
 
-Resolve at or before the day listed. Log resolution in `docs/DECISIONS.md` — do not close silently.
+Three items remain open on their scheduled days. All others are resolved — see `docs/DECISIONS.md`.
 
 | # | Item | Owner | Due |
 |---|---|---|---|
-| Q1 | Hosting platform | Backend Dev | Day 1 kickoff |
-| Q2 | Frontend framework | Frontend Dev | Day 1 kickoff |
-| Q3 | Reset strategy: snapshot vs. re-seed | Backend Dev | Day 2 morning standup |
-| Q4 | Demo credentials: how many sets, who gets access Day 5 | QA | Day 4 EOD |
-| Q5 | Browser targets: Chrome only or also Safari/Firefox | Frontend Dev | Day 1 kickoff |
-| Q6 | actor_label: pull from auth.users metadata or hardcode "Demo Coordinator" | Backend Dev | Day 1 kickoff |
-| Q7 | Design system tokens locked → `docs/DESIGN_SYSTEM.md` created | Frontend Dev | Day 0 |
-| Q8 | message_custom on revert: if coordinator edits then reverts, is flag TRUE or FALSE | Backend + Frontend Dev | Day 3 morning sync |
+| Q3 | Reset strategy: snapshot vs. re-seed | Chris (Backend Dev) | Day 2 morning standup |
+| Q4 | Demo credentials: how many sets, who gets access Day 5 | Natalie (QA) | Day 4 EOD |
+| Q8 | message_custom on revert: if coordinator edits then reverts, is flag TRUE or FALSE | Jill + Chris | Day 3 morning sync |
 
 ---
 
@@ -262,9 +251,10 @@ Seed data must match these starting states exactly. Review against `docs/QA_SCEN
 | File | Purpose |
 |---|---|
 | `docs/STATE_MACHINE.md` | Transition table, pre-conditions, error codes, patient message copy, display labels |
-| `docs/DESIGN_SYSTEM.md` | Tokens, typography, spacing, components — do not use until LOCKED |
+| `docs/DESIGN_SYSTEM.md` | Tokens, typography, spacing, components — LOCKED, safe to reference |
 | `docs/DECISIONS.md` | Locked decisions + open items log |
 | `docs/BUILD_CHECKLIST.md` | Day-by-day task list with owners and verification steps |
 | `docs/QA_SCENARIOS.md` | 5 scripted demo scenarios with step-by-step expected outputs |
-| `docs/API_CONTRACT.md` | Backend endpoint and data-shape contracts |
-| `docs/DOC_CONFLICTS.md` | Documentation conflict audit and resolution notes |
+| `docs/DOC_CONFLICTS.md` | All 8 pre-implementation conflicts — all resolved |
+| `docs/ui-design-SKILL-PA-Status-Relay.md` | Frontend design system and engineering rules |
+| `docs/laws-of-ux-SKILL-PA-Status-Relay.md` | UX law applications by surface |
