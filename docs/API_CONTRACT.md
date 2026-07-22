@@ -369,6 +369,8 @@ Demo-only endpoint. Restores a case to its seeded baseline state and writes a `d
 
 Locked reset strategy: Option A snapshot restore. Each seed/demo case must have a baseline snapshot available to the backend. Reset restores case fields from that snapshot, preserves existing `audit_trail` rows, and records the reset only in `demo_events`.
 
+Backend helper contract: reset accepts the baseline snapshot as an input and prepares a case update plus a `demo_events` insert. The storage location for the snapshot is a Supabase implementation detail to confirm with Lebert.
+
 Request:
 
 ```json
@@ -400,6 +402,8 @@ Reset strategy is locked in D14 in `docs/DECISIONS.md`.
 ### `POST /api/cases/:id/clone`
 
 Demo-only endpoint. Creates an independent mock case copy with status `new_order` and an empty audit trail. Writes a `demo_events` row on the source case.
+
+Clone copies `patient_name` and `consent_flag`, resets case metadata to empty values, and does not copy audit rows.
 
 Response `201`:
 
