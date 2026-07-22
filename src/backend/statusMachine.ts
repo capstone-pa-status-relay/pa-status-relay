@@ -90,7 +90,7 @@ const INVALID_TRANSITION_ERROR: TransitionError = {
   message: "This status transition is not allowed.",
 };
 
-const TRANSITION_GATES = {
+const TRANSITION_GATES: Record<string, TransitionGate> = {
   "new_order->submitted": {
     field: "doc_link",
     error: "missing_doc_link",
@@ -141,7 +141,7 @@ const TRANSITION_GATES = {
     error: "missing_next_step",
     message: "A next-step note is required to close a denied case.",
   },
-} satisfies Record<string, TransitionGate>;
+};
 
 export function isPaStatus(value: string): value is PaStatus {
   return (PA_STATUSES as readonly string[]).includes(value);
