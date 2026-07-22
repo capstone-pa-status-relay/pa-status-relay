@@ -81,7 +81,6 @@ All normal work should go through pull requests. Direct pushes to `main` are set
 
 Do not hardcode unresolved decisions. Track them as TODOs or contract notes until resolved:
 
-- Q3 Reset strategy
 - Q4 Demo credentials
 - Q8 `message_custom` behavior when edited text is reverted before confirmation
 

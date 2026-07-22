@@ -90,18 +90,15 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rationale:** QA_SCENARIOS.md Scenario 3 Step 2 defines the pass/fail expected output. The QA string is actionable (not a statement of past suppression) and avoids the "suppressed" framing that implies the action already occurred.
 **Rejected:** "Message suppressed — patient has not consented to status updates." (DESIGN_SYSTEM.md §8b) — past-tense framing, not actionable; "Message suppressed — record patient consent to enable delivery." (DESIGN_SYSTEM.md §8d) — inconsistent with QA expected output.
 
+### D14 — Reset strategy: snapshot restore
+**Date:** July 2026 (Day 2, Q3 resolution)
+**Decision:** Use Option A for Reset: store or maintain a baseline snapshot for each seed/demo case and restore the case from that snapshot when `POST /api/cases/:id/reset` runs. Reset writes a `demo_events` row with `event_type = 'reset'` and does not delete or rewrite existing `audit_trail` rows.
+**Rationale:** Snapshot restore is more reliable than re-running seed inserts because demo cases may be edited during testing. It gives Reset one clear target state per case while preserving audit immutability.
+**Rejected:** Option B, re-running seed inserts for the case_id — rejected because it is more fragile after edits, can create idempotency problems, and risks accidentally changing audit evidence instead of only restoring the case baseline.
+
 ---
 
 ## Open Items (resolve and move to Locked Decisions above)
-
-### Q3 — Reset strategy
-**Status:** Open — resolve at Day 2 morning standup
-**Question:** Option A (store snapshot of seed state at creation, restore from snapshot on Reset) or Option B (re-run seed insert for that case_id)?
-**Owner:** Backend dev (Chris)
-**Recommended:** Option A — more reliable for cases that have been edited after seeding.
-**Resolution:** *(fill in)*
-
----
 
 ### Q4 — Demo credentials
 **Status:** Open — resolve before Day 4 EOD

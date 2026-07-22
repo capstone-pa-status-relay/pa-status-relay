@@ -188,7 +188,7 @@ All detailed contract content lives in `docs/STATE_MACHINE.md`. This section sta
 
 **Auth** — email/password via Supabase, email confirmation disabled, session persists on refresh, no SSO/OAuth/magic link.
 
-**Reset strategy** — decide Option A (snapshot) vs. Option B (re-seed) at Day 2 morning standup before touching the endpoint. Log decision in `docs/DECISIONS.md` (Q3).
+**Reset strategy is locked to Option A snapshot restore.** Reset restores the case from its seeded baseline snapshot, writes a `demo_events` row, and does not delete or rewrite existing `audit_trail` rows. See D14 in `docs/DECISIONS.md`.
 
 ---
 
@@ -211,11 +211,10 @@ All detailed contract content lives in `docs/STATE_MACHINE.md`. This section sta
 
 ## 9. Open Items
 
-Three items remain open on their scheduled days. All others are resolved — see `docs/DECISIONS.md`.
+Two items remain open on their scheduled days. All others are resolved — see `docs/DECISIONS.md`.
 
 | # | Item | Owner | Due |
 |---|---|---|---|
-| Q3 | Reset strategy: snapshot vs. re-seed | Chris (Backend Dev) | Day 2 morning standup |
 | Q4 | Demo credentials: how many sets, who gets access Day 5 | Natalie (QA) | Day 4 EOD |
 | Q8 | message_custom on revert: if coordinator edits then reverts, is flag TRUE or FALSE | Jill + Chris | Day 3 morning sync |
 
