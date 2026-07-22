@@ -86,7 +86,7 @@ Roles in this file:
 ## DAY 2 — Core Flows
 **Goal: Coordinator can create a case · update status · see audit entry appear**
 
-**[SYNC] Backend reset strategy: decide Option A (snapshot) vs. Option B (re-seed) at morning standup before anyone touches the Reset endpoint — 15 minutes, non-negotiable.**
+**[SYNC] Backend reset strategy is locked as Option A snapshot restore (D14). Confirm snapshot storage with the Supabase owner before wiring the Reset endpoint.**
 
 **Frontend (~3 hrs)**
 - [ ] Case List wired to live Supabase data — replace mock array
@@ -123,7 +123,7 @@ Roles in this file:
 **Backend — Message + Consent + Demo Controls (~2.5 hrs)**
 - [ ] consent_flag readable and writable on case record
 - [ ] Message template engine: each of 9 statuses maps to correct patient-facing string (see STATE_MACHINE.md)
-- [ ] Reset strategy decided at morning standup — implement chosen option
+- [ ] Reset strategy locked as Option A snapshot restore — implement against the agreed snapshot storage
 - [ ] `POST /api/cases/:id/reset` implemented
 - [ ] demo_events row written on reset (event_type = 'reset')
 - [ ] `POST /api/cases/:id/clone` implemented
@@ -295,8 +295,8 @@ Feed STATE_MACHINE.md transition table directly into Claude Code. Do not rely on
 **2. Frontend/backend integration on preview modal (Day 3)**
 The 15-minute sync at Day 3 start is not optional. Misalignment on the API response shape → UI trigger contract costs hours to untangle under sprint pressure.
 
-**3. Reset strategy (Day 2 morning standup)**
-Must be decided before backend touches the Reset endpoint. Default recommendation: snapshot approach — store seed state at case creation, restore from snapshot on reset.
+**3. Reset snapshot storage (Day 2 Supabase sync)**
+Reset strategy is locked as Option A snapshot restore. Confirm where the seed baseline snapshot lives before wiring the Reset endpoint.
 
 **4. Hosting / demo URL (Day 4)**
 Commonly left for Day 5 morning and then becomes a blocker. Confirm and test the hosted URL before EOD Day 4.

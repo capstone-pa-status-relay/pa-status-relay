@@ -11,6 +11,8 @@ export type CaseSortField = "updated_at";
 export type AuditActionType = "status_transition" | "message_suppressed";
 export type DemoEventType = "reset" | "clone" | "reopen";
 
+export const DEMO_EVENT_TYPES: readonly DemoEventType[] = ["reset", "clone", "reopen"];
+
 export type CaseSummary = {
   id: CaseId;
   patient_name: string;
@@ -71,6 +73,14 @@ export type CreateCaseResponse = {
 
 export type GetCaseResponse = {
   case: CaseDetail;
+};
+
+export type UpdateCaseConsentRequest = {
+  consent_flag: boolean;
+};
+
+export type UpdateCaseConsentResponse = {
+  case: Pick<CaseSummary, "id" | "status" | "consent_flag" | "updated_at">;
 };
 
 export type TransitionCaseRequest = {

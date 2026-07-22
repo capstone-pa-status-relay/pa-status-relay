@@ -112,6 +112,8 @@ Final field names must match Lebert's Supabase schema once locked.
 
 ### Demo Event
 
+Supabase stores demo event time as `timestamp`; API responses expose it as `created_at`.
+
 ```json
 {
   "id": "event_001",
@@ -204,6 +206,38 @@ Response `200`:
   }
 }
 ```
+
+### `PATCH /api/cases/:id/consent`
+
+Updates the case consent flag. This does not retroactively send messages or modify prior audit rows. Any prior transition with `message_sent = false` remains unchanged; message delivery can only happen on a later transition.
+
+Request:
+
+```json
+{
+  "consent_flag": true
+}
+```
+
+Response `200`:
+
+```json
+{
+  "case": {
+    "id": "case_001",
+    "status": "pending_review",
+    "consent_flag": true,
+    "updated_at": "2026-07-21T15:00:00Z"
+  }
+}
+```
+
+Required behavior:
+
+- `consent_flag` is required and must be boolean.
+- Return `400 missing_consent_flag` if absent or invalid.
+- Do not write to `audit_trail` for prior messages.
+- Do not retroactively send messages for prior status changes.
 
 ### `POST /api/cases/:id/transition`
 
@@ -305,7 +339,7 @@ Response `200`:
 }
 ```
 
-Ordering note: Jill flagged audit display as most recent first. Confirm whether API returns reverse chronological order or frontend sorts the fetched array.
+Default ordering: reverse chronological, most recent first. This is locked in D12 in `docs/DECISIONS.md`, so the frontend can render the default audit response without applying its own sort.
 
 ### `GET /api/cases/:id/audit/export`
 
@@ -334,6 +368,8 @@ Rules:
 Demo-only endpoint. Restores a case to its seeded baseline state and writes a `demo_events` row.
 
 Locked reset strategy: Option A snapshot restore. Each seed/demo case must have a baseline snapshot available to the backend. Reset restores case fields from that snapshot, preserves existing `audit_trail` rows, and records the reset only in `demo_events`.
+
+Backend helper contract: reset accepts the baseline snapshot as an input and prepares a case update plus a `demo_events` insert. The storage location for the snapshot is a Supabase implementation detail to confirm with Lebert.
 
 Request:
 
@@ -366,6 +402,8 @@ Reset strategy is locked in D14 in `docs/DECISIONS.md`.
 ### `POST /api/cases/:id/clone`
 
 Demo-only endpoint. Creates an independent mock case copy with status `new_order` and an empty audit trail. Writes a `demo_events` row on the source case.
+
+Clone copies `patient_name` and `consent_flag`, resets case metadata to empty values, and does not copy audit rows.
 
 Response `201`:
 
@@ -409,7 +447,6 @@ Resolve or confirm these before implementation:
 - Q1 hosting platform
 - Q6 `actor_label` source
 - Q8 `message_custom` behavior if edited text is reverted before confirmation
-- Whether audit API sorts most recent first or frontend sorts client-side
 - Whether consent false uses a separate audit row with `action = message_suppressed`, or a transition audit row with action/message fields that expose suppression
 - Final Supabase schema field names from Lebert before API code starts
 
