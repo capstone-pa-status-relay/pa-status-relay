@@ -9,7 +9,7 @@ import type {
   TransitionCaseResponse,
 } from "./apiTypes.ts";
 import type { PaStatus } from "./statusMachine.ts";
-import { validateTransition } from "./statusMachine.ts";
+import { getPatientMessage, validateTransition } from "./statusMachine.ts";
 
 export type TransitionActor = {
   actor_id: ActorId;
@@ -140,9 +140,21 @@ function getEffectiveMessageFields(
 
   return {
     message_sent: request.message_sent,
-    message_text: request.message_sent ? request.message_text : null,
+    message_text: getAuditedMessageText(request),
     message_custom: request.message_sent ? request.message_custom : false,
   };
+}
+
+function getAuditedMessageText(request: TransitionCaseRequest): string | null {
+  if (!request.message_sent) {
+    return null;
+  }
+
+  if (request.message_custom) {
+    return request.message_text;
+  }
+
+  return getPatientMessage(request.to_status);
 }
 
 function coalesceNullable(nextValue: string | null | undefined, currentValue: string | null): string | null {

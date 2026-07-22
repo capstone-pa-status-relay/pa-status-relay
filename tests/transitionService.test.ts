@@ -159,6 +159,64 @@ test("forces message fields to unsent when consent is false", () => {
   assert.equal(result.transition.response.audit_entry.message_custom, false);
 });
 
+test("uses the locked template when a sent message is not custom", () => {
+  const result = prepareTransition(
+    {
+      ...baseCase,
+      status: "pending_review",
+      consent_flag: true,
+    },
+    {
+      to_status: "denied",
+      reason_code: "payer_denial",
+      message_text: "Denied because of payer reason code ABC.",
+      message_sent: true,
+      message_custom: false,
+    },
+    actor,
+    timestamp,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+
+  assert.equal(
+    result.transition.audit_insert.message_text,
+    "Your insurance did not approve your request. Your care team will discuss next steps.",
+  );
+  assert.equal(result.transition.audit_insert.message_custom, false);
+});
+
+test("preserves explicitly custom message text when consent is true", () => {
+  const customMessage = "Your care team has an update and will contact you about next steps.";
+  const result = prepareTransition(
+    {
+      ...baseCase,
+      status: "pending_review",
+      consent_flag: true,
+    },
+    {
+      to_status: "denied",
+      reason_code: "payer_denial",
+      message_text: customMessage,
+      message_sent: true,
+      message_custom: true,
+    },
+    actor,
+    timestamp,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+
+  assert.equal(result.transition.audit_insert.message_text, customMessage);
+  assert.equal(result.transition.audit_insert.message_custom, true);
+});
+
 test("keeps existing metadata when the transition request does not replace it", () => {
   const result = prepareTransition(
     {

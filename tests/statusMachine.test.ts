@@ -141,6 +141,17 @@ test("treats blank gated metadata as missing", () => {
 
 test("exposes locked patient-facing message copy and labels", () => {
   assert.equal(STATUS_LABELS.peer_to_peer, "Peer-to-Peer");
+  assert.deepEqual(PATIENT_MESSAGES, {
+    new_order: "We've received your treatment order. We'll update you as we make progress.",
+    needs_documentation: "Your care team is preparing everything needed for insurance review.",
+    submitted: "Your PA request has been submitted and is under insurance review.",
+    pending_review: "Your insurance is reviewing your request. We'll contact you when there's a decision.",
+    info_request: "We're sending additional information to your insurer.",
+    peer_to_peer: "A clinical discussion has been requested by your insurance provider.",
+    approved: "Your treatment is approved. Scheduling will contact you next.",
+    denied: "Your insurance did not approve your request. Your care team will discuss next steps.",
+    closed: "Your authorization case is complete. For questions, contact [office #].",
+  });
   assert.equal(
     getPatientMessage("approved"),
     "Your treatment is approved. Scheduling will contact you next.",
@@ -149,6 +160,16 @@ test("exposes locked patient-facing message copy and labels", () => {
     PATIENT_MESSAGES.denied,
     "Your insurance did not approve your request. Your care team will discuss next steps.",
   );
+});
+
+test("keeps denied patient message free of denial rationale and reason-code detail", () => {
+  const deniedMessage = getPatientMessage("denied").toLowerCase();
+
+  assert.equal(deniedMessage.includes("reason code"), false);
+  assert.equal(deniedMessage.includes("clinical rationale"), false);
+  assert.equal(deniedMessage.includes("medical necessity"), false);
+  assert.equal(deniedMessage.includes("diagnosis"), false);
+  assert.equal(deniedMessage.includes("criteria"), false);
 });
 
 test("exposes transition gate metadata for frontend/API contract checks", () => {
