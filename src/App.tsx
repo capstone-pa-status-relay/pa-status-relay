@@ -87,9 +87,9 @@ function FilterChip({
   onClick: () => void;
 }) {
   const config = status ? BADGE_CONFIG[status] : null;
-  const activeBg     = config ? config.bg     : "#2563EB";
+  const activeBg     = config ? config.bg     : "var(--pa-primary)";
   const activeText   = config ? config.text   : "#FFFFFF";
-  const activeBorder = config ? config.border : "rgba(37,99,235,0.30)";
+  const activeBorder = config ? config.border : "rgba(27,79,114,0.30)";
   const Icon = config ? config.Icon : null;
 
   const restBg     = "#F1F5F9";
@@ -113,7 +113,7 @@ function FilterChip({
       onClick={onClick}
       onMouseEnter={(e) => applyHover(e.currentTarget)}
       onMouseLeave={(e) => removeHover(e.currentTarget)}
-      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap transition-colors duration-100 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2563EB]"
+      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap transition-colors duration-100 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pa-primary)]"
       style={{
         fontSize: "11px",
         fontWeight: 600,
@@ -165,7 +165,7 @@ function TransitionDropdown({
         className="w-full flex items-center justify-between px-3 py-2 rounded-md border text-left"
         style={{
           borderColor: open ? "var(--pa-primary)" : "#CBD5E1",
-          boxShadow: open ? "0 0 0 2px #2563EB" : "none",
+          boxShadow: open ? "0 0 0 2px var(--pa-primary)" : "none",
           backgroundColor: "#FFFFFF",
           height: "36px",
           outline: "none",
@@ -695,8 +695,8 @@ function StatusDrawer({
               outline: "none",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#2563EB";
-              e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB";
+              e.currentTarget.style.borderColor = "var(--pa-primary)";
+              e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)";
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#CBD5E1";
@@ -834,7 +834,7 @@ function FilterDropdown({ label }: { label: string }) {
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
       style={{
         color: "#4A5568",
         borderColor: "#CBD5E1",
@@ -1115,7 +1115,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
           </div>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
             style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
             aria-label="Export CSV"
           >
@@ -1125,7 +1125,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center justify-center rounded-md w-8 h-8 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+            className="flex items-center justify-center rounded-md w-8 h-8 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
             style={{ color: "#718096" }}
             aria-label="Close audit trail"
           >
@@ -1199,7 +1199,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
             </span>
             <button
               type="button"
-              className="text-[12px] font-medium leading-[1.4] underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] rounded"
+              className="text-[12px] font-medium leading-[1.4] underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)] rounded"
               style={{ color: "var(--pa-primary)" }}
             >
               Clear
@@ -1399,7 +1399,7 @@ function CreateCaseModal({
               boxSizing: "border-box",
               outline: "none",
             }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
             onBlur={(e) => {
               setNameTouched(true);
               e.currentTarget.style.boxShadow = "none";
@@ -1551,7 +1551,7 @@ export default function App() {
   return (
     <div
       className="relative flex h-screen w-full overflow-hidden"
-      style={{ fontFamily: "Inter, sans-serif", backgroundColor: "#F8FAFC" }}
+      style={{ fontFamily: "Inter, sans-serif", backgroundColor: "#F8FAFC", display: "flex", flexDirection: "row", height: "100vh", width: "100%", overflow: "hidden", position: "relative" }}
     >
       <style>{`
         .pa-mono {
@@ -1562,68 +1562,14 @@ export default function App() {
         }
       `}</style>
 
-      {/* Overlay — covers full viewport including sidebar */}
-      {drawerOpen && !modalOpen && !auditOpen && (
-        <div
-          className="absolute inset-0 z-10"
-          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
-          onClick={() => setDrawerOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Audit overlay */}
-      {auditOpen && (
-        <div
-          className="absolute inset-0 z-10"
-          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
-          onClick={() => setAuditOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Create case modal overlay */}
-      {showCreateCase && (
-        <div
-          className="absolute inset-0 z-30 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
-        >
-          <CreateCaseModal
-            onSubmit={handleCreateCaseSubmit}
-            onClose={() => setShowCreateCase(false)}
-          />
-        </div>
-      )}
-
-      {/* Modal overlay — above drawer */}
-      {modalOpen && (
-        <div
-          className="absolute inset-0 z-30 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
-        >
-          <MessagePreviewModal
-            consentActive={selectedCase?.consent_flag ?? true}
-            messageText={modalMessageText}
-            onMessageChange={setModalMessageText}
-            onConfirm={() => {
-              console.log("message_sent=TRUE");
-              setModalOpen(false);
-              setDrawerOpen(false);
-            }}
-            onLogWithoutSending={() => {
-              setModalOpen(false);
-              setDrawerOpen(false);
-            }}
-            onClose={() => setModalOpen(false)}
-            onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
-          />
-        </div>
-      )}
-
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside
         className="flex flex-col shrink-0 h-full"
         style={{
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+          height: "100%",
           width: 220,
           backgroundColor: "#F8FAFC",
           borderRight: "1px solid #E2E8F0",
@@ -1636,7 +1582,7 @@ export default function App() {
         >
           <div
             className="flex items-center justify-center rounded-md shrink-0"
-            style={{ width: 28, height: 28, backgroundColor: "#2563EB" }}
+            style={{ width: 28, height: 28, backgroundColor: "var(--pa-primary)" }}
           >
             <Layers size={15} color="#FFFFFF" aria-hidden="true" />
           </div>
@@ -1664,7 +1610,7 @@ export default function App() {
               color: "var(--pa-primary)",
               fontSize: 14,
               fontWeight: 500,
-              border: "1px solid rgba(37,99,235,0.12)",
+              border: "1px solid rgba(27,79,114,0.12)",
             }}
           >
             <Layers size={15} aria-hidden="true" />
@@ -1687,11 +1633,11 @@ export default function App() {
       </aside>
 
       {/* ── Main Content ─────────────────────────────────────────────────────── */}
-      <main className="relative flex flex-col flex-1 min-w-0 h-full overflow-hidden" style={{ backgroundColor: "#F8FAFC" }}>
+      <main className="relative flex flex-col flex-1 min-w-0 h-full overflow-hidden" style={{ position: "relative", display: "flex", flexDirection: "column", flex: 1, minWidth: 0, height: "100%", overflow: "hidden", backgroundColor: "#F8FAFC" }}>
         {/* Top Bar */}
         <div
           className="flex items-center gap-4 px-6 shrink-0"
-          style={{ height: 56, borderBottom: "1px solid #E2E8F0" }}
+          style={{ display: "flex", alignItems: "center", gap: 16, paddingLeft: 24, paddingRight: 24, flexShrink: 0, height: 56, borderBottom: "1px solid #E2E8F0" }}
         >
           <h1
             style={{
@@ -1730,7 +1676,7 @@ export default function App() {
                 border: "1px solid #CBD5E1",
                 fontFamily: "Inter, sans-serif",
               }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
               onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             />
           </div>
@@ -1752,7 +1698,7 @@ export default function App() {
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary)")}
             onClick={handleCreateCase}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)")}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary), 0 0 0 4px rgba(27,79,114,0.2)")}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             <PlusCircle size={14} aria-hidden="true" />
@@ -1892,10 +1838,10 @@ export default function App() {
                     <td style={{ padding: "12px 16px", width: 40 }}>
                       <button
                         className="flex items-center justify-center focus:outline-none rounded"
-                        style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "#2563EB" : "#CBD5E1" }}
+                        style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "var(--pa-primary)" : "#CBD5E1" }}
                         onClick={(e) => { e.stopPropagation(); toggleCheck(String(c.id)); }}
                         aria-label={`Select ${c.name}`}
-                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
                         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
                         {checked.has(String(c.id))
@@ -2026,7 +1972,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setAuditOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
               style={{
                 backgroundColor: "#FFFFFF",
                 color: "#4A5568",
@@ -2041,7 +1987,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => { setSelectedCaseId("1"); setDrawerOpen(true); }}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
               style={{
                 backgroundColor: "#FFFFFF",
                 color: "#4A5568",
@@ -2056,6 +2002,64 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Overlay — covers full viewport including sidebar */}
+      {drawerOpen && !modalOpen && !auditOpen && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Audit overlay */}
+      {auditOpen && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
+          onClick={() => setAuditOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Create case modal overlay */}
+      {showCreateCase && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
+        >
+          <CreateCaseModal
+            onSubmit={handleCreateCaseSubmit}
+            onClose={() => setShowCreateCase(false)}
+          />
+        </div>
+      )}
+
+      {/* Modal overlay — above drawer */}
+      {modalOpen && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
+        >
+          <MessagePreviewModal
+            consentActive={selectedCase?.consent_flag ?? true}
+            messageText={modalMessageText}
+            onMessageChange={setModalMessageText}
+            onConfirm={() => {
+              console.log("message_sent=TRUE");
+              setModalOpen(false);
+              setDrawerOpen(false);
+            }}
+            onLogWithoutSending={() => {
+              setModalOpen(false);
+              setDrawerOpen(false);
+            }}
+            onClose={() => setModalOpen(false)}
+            onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
+          />
+        </div>
+      )}
     </div>
   );
 }
