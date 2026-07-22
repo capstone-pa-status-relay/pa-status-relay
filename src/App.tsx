@@ -6,6 +6,13 @@ import {
   X, ChevronDown, Check, MessageSquare, AlertTriangle,
   Download, ExternalLink, FolderOpen, SearchX, Plus,
 } from "lucide-react";
+import {
+  getValidTransitions,
+  getTransitionGate,
+  getPatientMessage,
+  STATUS_LABELS,
+  type PaStatus,
+} from "./backend/statusMachine";
 
 // ── Design System: Section 7 Badge Config ────────────────────────────────────
 const BADGE_CONFIG = {
@@ -132,25 +139,23 @@ function FilterChip({
 }
 
 // ── Transition Dropdown ───────────────────────────────────────────────────────
-type TransitionOption = {
-  value: PAStatus;
-  enabled: boolean;
-  intent?: "amber";
-};
-
-const SUBMITTED_TRANSITIONS: TransitionOption[] = [
-  { value: "pending_review",      enabled: true },
-  { value: "needs_documentation", enabled: true, intent: "amber" },
-];
+const RETURN_PATHS = new Set([
+  "submitted->needs_documentation",
+  "info_request->pending_review",
+  "peer_to_peer->pending_review",
+]);
 
 function TransitionDropdown({
+  currentStatus,
   value,
   onChange,
 }: {
-  value: PAStatus;
-  onChange: (v: PAStatus) => void;
+  currentStatus: PaStatus;
+  value: PaStatus;
+  onChange: (v: PaStatus) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const options = getValidTransitions(currentStatus);
 
   return (
     <div className="relative">
@@ -191,28 +196,28 @@ function TransitionDropdown({
             boxShadow: "0 4px 6px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.06)",
           }}
         >
-          {SUBMITTED_TRANSITIONS.map((opt) => (
+          {options.map((option) => (
             <li
-              key={opt.value}
+              key={option}
               role="option"
-              aria-selected={opt.value === value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
+              aria-selected={option === value}
+              onClick={() => { onChange(option); setOpen(false); }}
               className="flex items-center justify-between px-3 py-2 cursor-pointer"
               style={{
-                backgroundColor: opt.value === value ? "var(--pa-primary-subtle)" : "transparent",
+                backgroundColor: option === value ? "var(--pa-primary-subtle)" : "transparent",
               }}
               onMouseEnter={(e) => {
-                if (opt.value !== value)
+                if (option !== value)
                   (e.currentTarget as HTMLElement).style.backgroundColor = "#F8FAFC";
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.backgroundColor =
-                  opt.value === value ? "var(--pa-primary-subtle)" : "transparent";
+                  option === value ? "var(--pa-primary-subtle)" : "transparent";
               }}
             >
               <div className="flex items-center gap-2">
-                <StatusBadge status={opt.value} />
-                {opt.intent === "amber" && (
+                <StatusBadge status={option} />
+                {RETURN_PATHS.has(`${currentStatus}->${option}`) && (
                   <span
                     style={{
                       fontSize: "11px",
@@ -230,7 +235,7 @@ function TransitionDropdown({
                   </span>
                 )}
               </div>
-              {opt.value === value && (
+              {option === value && (
                 <Check size={14} style={{ color: "var(--pa-primary)", flexShrink: 0 }} />
               )}
             </li>
@@ -515,14 +520,26 @@ function StatusDrawer({
   onClose,
   consentActive,
   onOpenModal,
+  currentStatus,
 }: {
   onClose: () => void;
   consentActive: boolean;
   onOpenModal: (text: string) => void;
+  currentStatus: PaStatus;
 }) {
-  const [selectedTransition, setSelectedTransition] = useState<PAStatus>("pending_review");
-  const [messageText, setMessageText] = useState(MESSAGE_COPY);
-  const isEdited = messageText !== MESSAGE_COPY;
+  const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
+    () => getValidTransitions(currentStatus)[0] ?? "closed",
+  );
+  const [messageText, setMessageText] = useState(
+    () => getPatientMessage(getValidTransitions(currentStatus)[0] ?? "closed"),
+  );
+  const [gateError, setGateError] = useState<string | null>(null);
+  const isEdited = messageText !== getPatientMessage(selectedTransition);
+
+  useEffect(() => {
+    setMessageText(getPatientMessage(selectedTransition));
+    setGateError(null);
+  }, [selectedTransition]);
 
   return (
     <div
@@ -621,7 +638,26 @@ function StatusDrawer({
           >
             Log transition to
           </span>
-          <TransitionDropdown value={selectedTransition} onChange={setSelectedTransition} />
+          <TransitionDropdown
+            currentStatus={currentStatus}
+            value={selectedTransition}
+            onChange={setSelectedTransition}
+          />
+          {gateError && (
+            <p
+              role="alert"
+              style={{
+                fontSize: "13px",
+                fontWeight: 400,
+                lineHeight: "1.43",
+                color: "#B45309",
+                margin: 0,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              {gateError}
+            </p>
+          )}
         </div>
 
         {/* Message preview card */}
@@ -709,7 +745,12 @@ function StatusDrawer({
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            const gate = getTransitionGate(currentStatus, selectedTransition);
+            if (gate) { setGateError(gate.message); return; }
+            setGateError(null);
+            onClose();
+          }}
           className="px-4 rounded-md border"
           style={{
             height: "36px",
@@ -742,7 +783,12 @@ function StatusDrawer({
           type="button"
           disabled={!consentActive}
           title={!consentActive ? "Record patient consent to enable message delivery" : undefined}
-          onClick={() => { if (consentActive) onOpenModal(messageText); }}
+          onClick={() => {
+            const gate = getTransitionGate(currentStatus, selectedTransition);
+            if (gate) { setGateError(gate.message); return; }
+            setGateError(null);
+            if (consentActive) onOpenModal(messageText);
+          }}
           className="px-4 rounded-md"
           style={{
             height: "36px",
@@ -1751,6 +1797,7 @@ export default function App() {
             onClose={() => setDrawerOpen(false)}
             consentActive={selectedCase?.consent_flag ?? true}
             onOpenModal={openModal}
+            currentStatus={(selectedCase?.status as PaStatus) ?? "new_order"}
           />
         </div>
 
