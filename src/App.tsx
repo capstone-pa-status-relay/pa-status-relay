@@ -1602,6 +1602,11 @@ export default function App() {
 
   useEffect(() => {
     const fetchCases = async () => {
+      if (!supabase) {
+        console.warn("Supabase env vars are not configured; skipping case fetch.");
+        return;
+      }
+
       const { data, error } = await supabase
         .from('cases')
         .select('id, patient_name, current_status, consent_flag, updated_at')
