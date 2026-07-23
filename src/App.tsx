@@ -1598,6 +1598,7 @@ export default function App() {
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
+  const [errorBanner, setErrorBanner] = useState<{ message: string; visible: boolean; retry: (() => void) | null }>({ message: "", visible: false, retry: null });
 
   useEffect(() => {
     if (!successBanner.visible) return;
@@ -1684,14 +1685,17 @@ export default function App() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error("transition failed:", err.error, err.message);
+        setErrorBanner({ message: "Connection issue — changes weren't saved.", visible: true, retry: () => postTransition(toStatus, meta, messageSent, messageText, messageCustom) });
         return;
       }
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
       setSuccessBanner({ message: `Status updated to ${BADGE_CONFIG[data.case.status as PaStatus]?.label ?? data.case.status}`, visible: true });
+      setErrorBanner({ message: "", visible: false, retry: null });
       // TODO: refetch audit trail when audit API is wired
     } catch (err) {
       console.error("transition error:", err);
+      setErrorBanner({ message: "Connection issue — changes weren't saved.", visible: true, retry: () => postTransition(toStatus, meta, messageSent, messageText, messageCustom) });
     }
   }
 
@@ -1891,6 +1895,58 @@ export default function App() {
         </div>
 
         {/* Filter Chip Bar */}
+        {/* Error banner — persistent until success or manual dismiss */}
+        {errorBanner.visible && (
+          <div
+            role="alert"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 24px",
+              backgroundColor: "var(--pa-badge-denied-bg)",
+              borderBottom: "1px solid var(--pa-badge-denied-border)",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "var(--pa-badge-denied-text)",
+              fontFamily: "Inter, sans-serif",
+              flexShrink: 0,
+              gap: 12,
+            }}
+          >
+            <span>{errorBanner.message}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              {errorBanner.retry && (
+                <button
+                  type="button"
+                  onClick={() => errorBanner.retry?.()}
+                  style={{
+                    background: "none",
+                    border: "1px solid var(--pa-badge-denied-border)",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    padding: "2px 10px",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--pa-badge-denied-text)",
+                    fontFamily: "Inter, sans-serif",
+                  }}
+                >
+                  Retry
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Dismiss"
+                onClick={() => setErrorBanner((b) => ({ ...b, visible: false }))}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--pa-badge-denied-text)", display: "flex", alignItems: "center" }}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Success banner — scoped to case panel, auto-dismisses after 4s */}
         {successBanner.visible && (
           <div
