@@ -2253,15 +2253,19 @@ export default function App() {
             onConfirm={async () => {
               if (!pendingToStatus) return;
               const template = getPatientMessage(pendingToStatus);
-              await postTransition(pendingToStatus, pendingMeta, true, modalMessageText, modalMessageText !== template);
-              setModalOpen(false);
-              setDrawerOpen(false);
+              const ok = await postTransition(pendingToStatus, pendingMeta, true, modalMessageText, modalMessageText !== template);
+              if (ok) {
+                setModalOpen(false);
+                setDrawerOpen(false);
+              }
             }}
             onLogWithoutSending={async () => {
               if (!pendingToStatus) return;
-              await postTransition(pendingToStatus, pendingMeta, false, null, false);
-              setModalOpen(false);
-              setDrawerOpen(false);
+              const ok = await postTransition(pendingToStatus, pendingMeta, false, null, false);
+              if (ok) {
+                setModalOpen(false);
+                setDrawerOpen(false);
+              }
             }}
             onClose={() => setModalOpen(false)}
             onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
