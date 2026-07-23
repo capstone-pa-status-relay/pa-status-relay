@@ -181,3 +181,37 @@ test("exposes transition gate metadata for frontend/API contract checks", () => 
 
   assert.equal(getTransitionGate("pending_review", "approved"), null);
 });
+
+test("keeps the four transition gate field names stable for frontend/backend contracts", () => {
+  assert.deepEqual(
+    [
+      getTransitionGate("new_order", "submitted")?.field,
+      getTransitionGate("pending_review", "denied")?.field,
+      getTransitionGate("approved", "closed")?.field,
+      getTransitionGate("denied", "closed")?.field,
+    ],
+    ["doc_link", "reason_code", "appointment_link", "next_step_note"],
+  );
+});
+
+test("accepts gate metadata as non-empty free text without strict format validation", () => {
+  assert.deepEqual(validateTransition({
+    from_status: "new_order",
+    to_status: "submitted",
+    doc_link: "uploaded intake packet",
+  }), {
+    ok: true,
+    from_status: "new_order",
+    to_status: "submitted",
+  });
+
+  assert.deepEqual(validateTransition({
+    from_status: "approved",
+    to_status: "closed",
+    appointment_link: "call front desk to schedule",
+  }), {
+    ok: true,
+    from_status: "approved",
+    to_status: "closed",
+  });
+});
