@@ -6,6 +6,12 @@ import {
   X, ChevronDown, Check, MessageSquare, AlertTriangle,
   Download, ExternalLink, FolderOpen, SearchX, Plus,
 } from "lucide-react";
+import {
+  getValidTransitions,
+  getTransitionGate,
+  getPatientMessage,
+  type PaStatus,
+} from "./backend/statusMachine";
 
 // ── Design System: Section 7 Badge Config ────────────────────────────────────
 const BADGE_CONFIG = {
@@ -54,15 +60,15 @@ function StatusBadge({ status, size = "default" }: { status: PAStatus; size?: "d
 }
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
-const CASES = [
-  { id: 1, name: "Marcus Okafor",     drug: "Pembrolizumab", status: "approved"           as PAStatus, updated: "Jul 18, 2026 9:14 AM",  consent_flag: true  },
-  { id: 2, name: "Tanya Hargrove",    drug: "Rituximab",     status: "peer_to_peer"        as PAStatus, updated: "Jul 19, 2026 2:30 PM",  consent_flag: true  },
-  { id: 3, name: "Rafael Castellano", drug: "Bevacizumab",   status: "denied"              as PAStatus, updated: "Jul 20, 2026 8:02 AM",  consent_flag: true  },
-  { id: 4, name: "Linh Nguyen",       drug: "Nivolumab",     status: "submitted"           as PAStatus, updated: "Jul 20, 2026 10:45 AM", consent_flag: false },
-  { id: 5, name: "David Mbeki",       drug: "Trastuzumab",   status: "pending_review"      as PAStatus, updated: "Jul 19, 2026 11:20 AM", consent_flag: false },
-  { id: 6, name: "Anna Kowalski",     drug: "Ipilimumab",    status: "needs_documentation" as PAStatus, updated: "Jul 17, 2026 3:55 PM",  consent_flag: false },
-  { id: 7, name: "Pedro Reyes",       drug: "Atezolizumab",  status: "info_request"        as PAStatus, updated: "Jul 20, 2026 7:30 AM",  consent_flag: true  },
-  { id: 8, name: "Sara Johansson",    drug: "Durvalumab",    status: "closed"              as PAStatus, updated: "Jul 15, 2026 4:00 PM",  consent_flag: true  },
+const CASES_SEED = [
+  { id: "1", name: "Marcus Okafor",     drug: "Pembrolizumab", status: "approved"           as PAStatus, updated: "Jul 18, 2026 9:14 AM",  consent_flag: true  },
+  { id: "2", name: "Tanya Hargrove",    drug: "Rituximab",     status: "peer_to_peer"        as PAStatus, updated: "Jul 19, 2026 2:30 PM",  consent_flag: true  },
+  { id: "3", name: "Rafael Castellano", drug: "Bevacizumab",   status: "denied"              as PAStatus, updated: "Jul 20, 2026 8:02 AM",  consent_flag: true  },
+  { id: "4", name: "Linh Nguyen",       drug: "Nivolumab",     status: "submitted"           as PAStatus, updated: "Jul 20, 2026 10:45 AM", consent_flag: false },
+  { id: "5", name: "David Mbeki",       drug: "Trastuzumab",   status: "pending_review"      as PAStatus, updated: "Jul 19, 2026 11:20 AM", consent_flag: false },
+  { id: "6", name: "Anna Kowalski",     drug: "Ipilimumab",    status: "needs_documentation" as PAStatus, updated: "Jul 17, 2026 3:55 PM",  consent_flag: false },
+  { id: "7", name: "Pedro Reyes",       drug: "Atezolizumab",  status: "info_request"        as PAStatus, updated: "Jul 20, 2026 7:30 AM",  consent_flag: true  },
+  { id: "8", name: "Sara Johansson",    drug: "Durvalumab",    status: "closed"              as PAStatus, updated: "Jul 15, 2026 4:00 PM",  consent_flag: true  },
 ];
 
 const ALL_STATUSES = Object.keys(BADGE_CONFIG) as PAStatus[];
@@ -80,9 +86,9 @@ function FilterChip({
   onClick: () => void;
 }) {
   const config = status ? BADGE_CONFIG[status] : null;
-  const activeBg     = config ? config.bg     : "#2563EB";
+  const activeBg     = config ? config.bg     : "var(--pa-primary)";
   const activeText   = config ? config.text   : "#FFFFFF";
-  const activeBorder = config ? config.border : "rgba(37,99,235,0.30)";
+  const activeBorder = config ? config.border : "rgba(27,79,114,0.30)";
   const Icon = config ? config.Icon : null;
 
   const restBg     = "#F1F5F9";
@@ -106,7 +112,7 @@ function FilterChip({
       onClick={onClick}
       onMouseEnter={(e) => applyHover(e.currentTarget)}
       onMouseLeave={(e) => removeHover(e.currentTarget)}
-      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap transition-colors duration-100 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2563EB]"
+      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap transition-colors duration-100 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pa-primary)]"
       style={{
         fontSize: "11px",
         fontWeight: 600,
@@ -132,25 +138,23 @@ function FilterChip({
 }
 
 // ── Transition Dropdown ───────────────────────────────────────────────────────
-type TransitionOption = {
-  value: PAStatus;
-  enabled: boolean;
-  intent?: "amber";
-};
-
-const SUBMITTED_TRANSITIONS: TransitionOption[] = [
-  { value: "pending_review",      enabled: true },
-  { value: "needs_documentation", enabled: true, intent: "amber" },
-];
+const RETURN_PATHS = new Set([
+  "submitted->needs_documentation",
+  "info_request->pending_review",
+  "peer_to_peer->pending_review",
+]);
 
 function TransitionDropdown({
+  currentStatus,
   value,
   onChange,
 }: {
-  value: PAStatus;
-  onChange: (v: PAStatus) => void;
+  currentStatus: PaStatus;
+  value: PaStatus;
+  onChange: (v: PaStatus) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const options = getValidTransitions(currentStatus);
 
   return (
     <div className="relative">
@@ -160,7 +164,7 @@ function TransitionDropdown({
         className="w-full flex items-center justify-between px-3 py-2 rounded-md border text-left"
         style={{
           borderColor: open ? "var(--pa-primary)" : "#CBD5E1",
-          boxShadow: open ? "0 0 0 2px #2563EB" : "none",
+          boxShadow: open ? "0 0 0 2px var(--pa-primary)" : "none",
           backgroundColor: "#FFFFFF",
           height: "36px",
           outline: "none",
@@ -191,28 +195,28 @@ function TransitionDropdown({
             boxShadow: "0 4px 6px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.06)",
           }}
         >
-          {SUBMITTED_TRANSITIONS.map((opt) => (
+          {options.map((option) => (
             <li
-              key={opt.value}
+              key={option}
               role="option"
-              aria-selected={opt.value === value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
+              aria-selected={option === value}
+              onClick={() => { onChange(option); setOpen(false); }}
               className="flex items-center justify-between px-3 py-2 cursor-pointer"
               style={{
-                backgroundColor: opt.value === value ? "var(--pa-primary-subtle)" : "transparent",
+                backgroundColor: option === value ? "var(--pa-primary-subtle)" : "transparent",
               }}
               onMouseEnter={(e) => {
-                if (opt.value !== value)
+                if (option !== value)
                   (e.currentTarget as HTMLElement).style.backgroundColor = "#F8FAFC";
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.backgroundColor =
-                  opt.value === value ? "var(--pa-primary-subtle)" : "transparent";
+                  option === value ? "var(--pa-primary-subtle)" : "transparent";
               }}
             >
               <div className="flex items-center gap-2">
-                <StatusBadge status={opt.value} />
-                {opt.intent === "amber" && (
+                <StatusBadge status={option} />
+                {RETURN_PATHS.has(`${currentStatus}->${option}`) && (
                   <span
                     style={{
                       fontSize: "11px",
@@ -230,7 +234,7 @@ function TransitionDropdown({
                   </span>
                 )}
               </div>
-              {opt.value === value && (
+              {option === value && (
                 <Check size={14} style={{ color: "var(--pa-primary)", flexShrink: 0 }} />
               )}
             </li>
@@ -360,6 +364,7 @@ function MessagePreviewModal({
   onConfirm,
   onLogWithoutSending,
   onClose,
+  onRecordConsent,
 }: {
   consentActive: boolean;
   messageText: string;
@@ -367,6 +372,7 @@ function MessagePreviewModal({
   onConfirm: () => void;
   onLogWithoutSending: () => void;
   onClose: () => void;
+  onRecordConsent?: () => void;
 }) {
   return (
     <ModalShell>
@@ -488,7 +494,7 @@ function MessagePreviewModal({
               >
                 Consent required — record consent to enable message delivery.
               </p>
-              <SecondaryButton>Record consent</SecondaryButton>
+              <SecondaryButton onClick={onRecordConsent}>Record consent</SecondaryButton>
             </div>
           </div>
         )}
@@ -515,14 +521,25 @@ function StatusDrawer({
   onClose,
   consentActive,
   onOpenModal,
+  currentStatus,
 }: {
   onClose: () => void;
   consentActive: boolean;
   onOpenModal: (text: string) => void;
+  currentStatus: PaStatus;
 }) {
-  const [selectedTransition, setSelectedTransition] = useState<PAStatus>("pending_review");
-  const [messageText, setMessageText] = useState(MESSAGE_COPY);
-  const isEdited = messageText !== MESSAGE_COPY;
+  const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
+    () => getValidTransitions(currentStatus)[0] ?? "closed",
+  );
+  const [messageText, setMessageText] = useState(
+    () => getPatientMessage(getValidTransitions(currentStatus)[0] ?? "closed"),
+  );
+  const [gateError, setGateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMessageText(getPatientMessage(selectedTransition));
+    setGateError(null);
+  }, [selectedTransition]);
 
   return (
     <div
@@ -621,7 +638,26 @@ function StatusDrawer({
           >
             Log transition to
           </span>
-          <TransitionDropdown value={selectedTransition} onChange={setSelectedTransition} />
+          <TransitionDropdown
+            currentStatus={currentStatus}
+            value={selectedTransition}
+            onChange={setSelectedTransition}
+          />
+          {gateError && (
+            <p
+              role="alert"
+              style={{
+                fontSize: "13px",
+                fontWeight: 400,
+                lineHeight: "1.43",
+                color: "#B45309",
+                margin: 0,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              {gateError}
+            </p>
+          )}
         </div>
 
         {/* Message preview card */}
@@ -643,7 +679,7 @@ function StatusDrawer({
 
           <textarea
             value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
+            readOnly
             rows={4}
             className="w-full rounded-md border px-3 py-2 resize-none"
             style={{
@@ -657,8 +693,8 @@ function StatusDrawer({
               outline: "none",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#2563EB";
-              e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB";
+              e.currentTarget.style.borderColor = "var(--pa-primary)";
+              e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)";
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#CBD5E1";
@@ -669,9 +705,7 @@ function StatusDrawer({
           <span
             style={{ fontSize: "12px", fontWeight: 500, color: "#64748B", lineHeight: 1.4 }}
           >
-            {isEdited
-              ? "Edited messages are flagged in the audit trail."
-              : "Edited messages are flagged in the audit trail."}
+            Patient-facing edits are completed in the confirmation modal.
           </span>
         </div>
 
@@ -709,7 +743,12 @@ function StatusDrawer({
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            const gate = getTransitionGate(currentStatus, selectedTransition);
+            if (gate) { setGateError(gate.message); return; }
+            setGateError(null);
+            onClose();
+          }}
           className="px-4 rounded-md border"
           style={{
             height: "36px",
@@ -742,7 +781,12 @@ function StatusDrawer({
           type="button"
           disabled={!consentActive}
           title={!consentActive ? "Record patient consent to enable message delivery" : undefined}
-          onClick={() => { if (consentActive) onOpenModal(messageText); }}
+          onClick={() => {
+            const gate = getTransitionGate(currentStatus, selectedTransition);
+            if (gate) { setGateError(gate.message); return; }
+            setGateError(null);
+            if (consentActive) onOpenModal(messageText);
+          }}
           className="px-4 rounded-md"
           style={{
             height: "36px",
@@ -786,7 +830,7 @@ function FilterDropdown({ label }: { label: string }) {
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
       style={{
         color: "#4A5568",
         borderColor: "#CBD5E1",
@@ -1067,7 +1111,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
           </div>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
             style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
             aria-label="Export CSV"
           >
@@ -1077,7 +1121,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center justify-center rounded-md w-8 h-8 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+            className="flex items-center justify-center rounded-md w-8 h-8 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
             style={{ color: "#718096" }}
             aria-label="Close audit trail"
           >
@@ -1151,7 +1195,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
             </span>
             <button
               type="button"
-              className="text-[12px] font-medium leading-[1.4] underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] rounded"
+              className="text-[12px] font-medium leading-[1.4] underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)] rounded"
               style={{ color: "var(--pa-primary)" }}
             >
               Clear
@@ -1259,16 +1303,178 @@ function EmptyBodyNoResults() {
   );
 }
 
+// ── Create Case Modal ─────────────────────────────────────────────────────────
+function CreateCaseModal({
+  onSubmit,
+  onClose,
+}: {
+  onSubmit: (patientName: string, consentFlag: boolean) => void;
+  onClose: () => void;
+}) {
+  const [patientName, setPatientName] = useState("");
+  const [consentFlag, setConsentFlag] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
+
+  const nameEmpty = patientName.trim() === "";
+  const showNameError = nameTouched && nameEmpty;
+
+  return (
+    <ModalShell>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "20px 20px 0",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: "1.35",
+            color: DS.textPrimary,
+            margin: 0,
+          }}
+        >
+          Create case
+        </h2>
+        <button
+          aria-label="Close modal"
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            color: DS.textMuted,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 4,
+          }}
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Patient name */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label
+            htmlFor="create-patient-name"
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: DS.textPrimary,
+              lineHeight: "1.4",
+              fontFamily: "Inter, sans-serif",
+            }}
+          >
+            Patient name
+          </label>
+          <input
+            id="create-patient-name"
+            type="text"
+            value={patientName}
+            onChange={(e) => setPatientName(e.target.value)}
+            placeholder="Full name"
+            style={{
+              width: "100%",
+              backgroundColor: "#FFFFFF",
+              border: `1px solid ${showNameError ? "#DC2626" : DS.borderInput}`,
+              borderRadius: 6,
+              padding: "8px 12px",
+              fontSize: 14,
+              fontWeight: 400,
+              lineHeight: "1.43",
+              color: DS.textPrimary,
+              fontFamily: "Inter, sans-serif",
+              boxSizing: "border-box",
+              outline: "none",
+            }}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
+            onBlur={(e) => {
+              setNameTouched(true);
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          />
+          {showNameError && (
+            <span
+              role="alert"
+              style={{
+                fontSize: 12,
+                fontWeight: 400,
+                color: "#DC2626",
+                lineHeight: "1.4",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Patient name is required.
+            </span>
+          )}
+        </div>
+
+        {/* Consent toggle */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <input
+            type="checkbox"
+            id="create-consent-flag"
+            checked={consentFlag}
+            onChange={(e) => setConsentFlag(e.target.checked)}
+            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--pa-primary)" }}
+          />
+          <label
+            htmlFor="create-consent-flag"
+            style={{
+              fontSize: 14,
+              fontWeight: 400,
+              color: DS.textPrimary,
+              lineHeight: "1.43",
+              fontFamily: "Inter, sans-serif",
+              cursor: "pointer",
+            }}
+          >
+            Patient has given consent
+          </label>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 8,
+          padding: "0 20px 20px",
+        }}
+      >
+        <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+        <PrimaryButton
+          disabled={nameEmpty}
+          onClick={() => onSubmit(patientName.trim(), consentFlag)}
+        >
+          Create case
+        </PrimaryButton>
+      </div>
+    </ModalShell>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [activeFilter, setActiveFilter] = useState<PAStatus | "all">("all");
   const [search, setSearch] = useState("");
-  const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [checked, setChecked] = useState<Set<string>>(new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedCaseId, setSelectedCaseId] = useState<number | null>(null);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessageText, setModalMessageText] = useState(MESSAGE_COPY);
   const [auditOpen, setAuditOpen] = useState(false);
+  const [showCreateCase, setShowCreateCase] = useState(false);
+  const [cases, setCases] = useState(CASES_SEED);
 
   useEffect(() => {
     if (!document.querySelector('link[data-pa-font]')) {
@@ -1281,22 +1487,26 @@ export default function App() {
     }
   }, []);
 
-  const filtered = CASES.filter((c) => {
+  const filtered = cases.filter((c) => {
     const matchStatus = activeFilter === "all" || c.status === activeFilter;
     const q = search.toLowerCase();
     const matchSearch = !q || c.name.toLowerCase().includes(q) || c.drug.toLowerCase().includes(q);
     return matchStatus && matchSearch;
   });
 
-  function toggleCheck(id: number) {
+  function toggleCheck(id: string) {
     setChecked((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
 
-  function openDrawer(id: number) {
+  function openDrawer(id: string) {
     setSelectedCaseId(id);
     setDrawerOpen(true);
   }
@@ -1307,15 +1517,41 @@ export default function App() {
   }
 
   function handleCreateCase() {
-    console.log("create case");
+    setShowCreateCase(true);
   }
 
-  const selectedCase = CASES.find((c) => c.id === selectedCaseId) ?? null;
+  function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
+    console.log("create case", { patientName, consentFlag });
+    setShowCreateCase(false);
+  }
+
+  async function handleConsentUpdate(id: string) {
+    try {
+      const res = await fetch(`/api/cases/${id}/consent`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consent_flag: true }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error(err.error, err.message);
+        return;
+      }
+      const data = await res.json();
+      setCases((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, consent_flag: data.case.consent_flag as boolean } : c)),
+      );
+    } catch (err) {
+      console.error("consent update failed", err);
+    }
+  }
+
+  const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
 
   return (
     <div
       className="relative flex h-screen w-full overflow-hidden"
-      style={{ fontFamily: "Inter, sans-serif", backgroundColor: "#F8FAFC" }}
+      style={{ fontFamily: "Inter, sans-serif", backgroundColor: "#F8FAFC", display: "flex", flexDirection: "row", height: "100vh", width: "100%", overflow: "hidden", position: "relative" }}
     >
       <style>{`
         .pa-mono {
@@ -1326,54 +1562,14 @@ export default function App() {
         }
       `}</style>
 
-      {/* Overlay — covers full viewport including sidebar */}
-      {drawerOpen && !modalOpen && !auditOpen && (
-        <div
-          className="absolute inset-0 z-10"
-          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
-          onClick={() => setDrawerOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Audit overlay */}
-      {auditOpen && (
-        <div
-          className="absolute inset-0 z-10"
-          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
-          onClick={() => setAuditOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Modal overlay — above drawer */}
-      {modalOpen && (
-        <div
-          className="absolute inset-0 z-30 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
-        >
-          <MessagePreviewModal
-            consentActive={selectedCase?.consent_flag ?? true}
-            messageText={modalMessageText}
-            onMessageChange={setModalMessageText}
-            onConfirm={() => {
-              console.log("message_sent=TRUE");
-              setModalOpen(false);
-              setDrawerOpen(false);
-            }}
-            onLogWithoutSending={() => {
-              setModalOpen(false);
-              setDrawerOpen(false);
-            }}
-            onClose={() => setModalOpen(false)}
-          />
-        </div>
-      )}
-
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
       <aside
         className="flex flex-col shrink-0 h-full"
         style={{
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+          height: "100%",
           width: 220,
           backgroundColor: "#F8FAFC",
           borderRight: "1px solid #E2E8F0",
@@ -1386,7 +1582,7 @@ export default function App() {
         >
           <div
             className="flex items-center justify-center rounded-md shrink-0"
-            style={{ width: 28, height: 28, backgroundColor: "#2563EB" }}
+            style={{ width: 28, height: 28, backgroundColor: "var(--pa-primary)" }}
           >
             <Layers size={15} color="#FFFFFF" aria-hidden="true" />
           </div>
@@ -1414,7 +1610,7 @@ export default function App() {
               color: "var(--pa-primary)",
               fontSize: 14,
               fontWeight: 500,
-              border: "1px solid rgba(37,99,235,0.12)",
+              border: "1px solid rgba(27,79,114,0.12)",
             }}
           >
             <Layers size={15} aria-hidden="true" />
@@ -1437,11 +1633,11 @@ export default function App() {
       </aside>
 
       {/* ── Main Content ─────────────────────────────────────────────────────── */}
-      <main className="relative flex flex-col flex-1 min-w-0 h-full overflow-hidden" style={{ backgroundColor: "#F8FAFC" }}>
+      <main className="relative flex flex-col flex-1 min-w-0 h-full overflow-hidden" style={{ position: "relative", display: "flex", flexDirection: "column", flex: 1, minWidth: 0, height: "100%", overflow: "hidden", backgroundColor: "#F8FAFC" }}>
         {/* Top Bar */}
         <div
           className="flex items-center gap-4 px-6 shrink-0"
-          style={{ height: 56, borderBottom: "1px solid #E2E8F0" }}
+          style={{ display: "flex", alignItems: "center", gap: 16, paddingLeft: 24, paddingRight: 24, flexShrink: 0, height: 56, borderBottom: "1px solid #E2E8F0" }}
         >
           <h1
             style={{
@@ -1480,7 +1676,7 @@ export default function App() {
                 border: "1px solid #CBD5E1",
                 fontFamily: "Inter, sans-serif",
               }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
               onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             />
           </div>
@@ -1502,7 +1698,7 @@ export default function App() {
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary)")}
             onClick={handleCreateCase}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)")}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary), 0 0 0 4px rgba(27,79,114,0.2)")}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             <PlusCircle size={14} aria-hidden="true" />
@@ -1616,7 +1812,7 @@ export default function App() {
 
             <tbody>
               {filtered.map((c, idx) => {
-                const isHover = c.id === 2;
+                const isHover = c.id === "2";
                 const isEven = idx % 2 === 1;
                 const rowBg = isHover ? "#F1F5F9" : isEven ? "#F1F5F9" : "#FFFFFF";
 
@@ -1630,7 +1826,7 @@ export default function App() {
                       cursor: "pointer",
                     }}
                     className="transition-colors duration-75 group"
-                    onClick={() => openDrawer(c.id)}
+                    onClick={() => openDrawer(String(c.id))}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#F1F5F9";
                     }}
@@ -1642,13 +1838,13 @@ export default function App() {
                     <td style={{ padding: "12px 16px", width: 40 }}>
                       <button
                         className="flex items-center justify-center focus:outline-none rounded"
-                        style={{ width: 16, height: 16, color: checked.has(c.id) ? "#2563EB" : "#CBD5E1" }}
-                        onClick={(e) => { e.stopPropagation(); toggleCheck(c.id); }}
+                        style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "var(--pa-primary)" : "#CBD5E1" }}
+                        onClick={(e) => { e.stopPropagation(); toggleCheck(String(c.id)); }}
                         aria-label={`Select ${c.name}`}
-                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
                         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
-                        {checked.has(c.id)
+                        {checked.has(String(c.id))
                           ? <CheckCircle2 size={16} aria-hidden="true" />
                           : <div style={{ width: 16, height: 16, border: "1.5px solid #CBD5E1", borderRadius: 3 }} />
                         }
@@ -1751,6 +1947,7 @@ export default function App() {
             onClose={() => setDrawerOpen(false)}
             consentActive={selectedCase?.consent_flag ?? true}
             onOpenModal={openModal}
+            currentStatus={(selectedCase?.status as PaStatus) ?? "new_order"}
           />
         </div>
 
@@ -1775,7 +1972,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setAuditOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
               style={{
                 backgroundColor: "#FFFFFF",
                 color: "#4A5568",
@@ -1789,8 +1986,8 @@ export default function App() {
             </button>
             <button
               type="button"
-              onClick={() => { setSelectedCaseId(1); setDrawerOpen(true); }}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+              onClick={() => { setSelectedCaseId("1"); setDrawerOpen(true); }}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
               style={{
                 backgroundColor: "#FFFFFF",
                 color: "#4A5568",
@@ -1805,6 +2002,64 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Overlay — covers full viewport including sidebar */}
+      {drawerOpen && !modalOpen && !auditOpen && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Audit overlay */}
+      {auditOpen && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{ backgroundColor: "rgba(15,23,42,0.4)" }}
+          onClick={() => setAuditOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Create case modal overlay */}
+      {showCreateCase && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
+        >
+          <CreateCaseModal
+            onSubmit={handleCreateCaseSubmit}
+            onClose={() => setShowCreateCase(false)}
+          />
+        </div>
+      )}
+
+      {/* Modal overlay — above drawer */}
+      {modalOpen && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center"
+          style={{ backgroundColor: "rgba(15,23,42,0.5)" }}
+        >
+          <MessagePreviewModal
+            consentActive={selectedCase?.consent_flag ?? true}
+            messageText={modalMessageText}
+            onMessageChange={setModalMessageText}
+            onConfirm={() => {
+              console.log("message_sent=TRUE");
+              setModalOpen(false);
+              setDrawerOpen(false);
+            }}
+            onLogWithoutSending={() => {
+              setModalOpen(false);
+              setDrawerOpen(false);
+            }}
+            onClose={() => setModalOpen(false)}
+            onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
+          />
+        </div>
+      )}
     </div>
   );
 }

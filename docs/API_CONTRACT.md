@@ -280,6 +280,7 @@ Required behavior:
 - Return `400 invalid_transition` for every transition not in the valid map.
 - Return the named missing-field error code for missing required metadata.
 - Consent false must result in `message_sent = false`; no patient-facing message should be recorded as sent.
+- `message_custom` is computed at modal confirmation by comparing the final confirmed `message_text` to the locked template for the target status. Exact match is `false`; any difference is `true`.
 
 Response `200`:
 
@@ -446,7 +447,6 @@ Resolve or confirm these before implementation:
 
 - Q1 hosting platform
 - Q6 `actor_label` source
-- Q8 `message_custom` behavior if edited text is reverted before confirmation
 - Whether consent false uses a separate audit row with `action = message_suppressed`, or a transition audit row with action/message fields that expose suppression
 - Final Supabase schema field names from Lebert before API code starts
 

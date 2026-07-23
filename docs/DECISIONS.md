@@ -87,7 +87,7 @@ Running log of locked decisions with rationale and rejected alternatives. Update
 **Date:** July 2026 (Day 1, C7 resolution)
 **Decision:** Single canonical string for the consent=FALSE banner: **"Consent required — record consent to enable message delivery."**
 This string is used in both the StatusDrawer (when consent=FALSE) and the Message Preview Modal (when consent=FALSE). All other variants retired.
-**Rationale:** QA_SCENARIOS.md Scenario 3 Step 2 defines the pass/fail expected output. The QA string is actionable (not a statement of past suppression) and avoids the "suppressed" framing that implies the action already occurred.
+**Rationale:** QA_SCENARIOS.md Scenario 3 Step 2 defines the pass/fail expected output. Chosen string is forward-looking (states what to do) rather than a statement of past suppression, and avoids the suppressed framing that implies the action already occurred. Consistent with QA expected output.
 **Rejected:** "Message suppressed — patient has not consented to status updates." (DESIGN_SYSTEM.md §8b) — past-tense framing, not actionable; "Message suppressed — record patient consent to enable delivery." (DESIGN_SYSTEM.md §8d) — inconsistent with QA expected output.
 
 ### D14 — Reset strategy: snapshot restore
@@ -95,6 +95,12 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Decision:** Use Option A for Reset: store or maintain a baseline snapshot for each seed/demo case and restore the case from that snapshot when `POST /api/cases/:id/reset` runs. Reset writes a `demo_events` row with `event_type = 'reset'` and does not delete or rewrite existing `audit_trail` rows.
 **Rationale:** Snapshot restore is more reliable than re-running seed inserts because demo cases may be edited during testing. It gives Reset one clear target state per case while preserving audit immutability.
 **Rejected:** Option B, re-running seed inserts for the case_id — rejected because it is more fragile after edits, can create idempotency problems, and risks accidentally changing audit evidence instead of only restoring the case baseline.
+
+### D15 — message_custom flag: string comparison at confirm time
+**Date:** July 2026 (Day 2, Q8 resolution)
+**Decision:** Compare final confirmed message text against the locked template string for the target status at modal confirm time. Exact match → `message_custom = false`. Any difference → `message_custom = true`.
+**Rationale:** Audit flag reflects the final message actually sent, not editor behavior. Semantically accurate and straightforward to implement — one string comparison before firing `POST /transition`.
+**Rejected:** Tracking whether the textarea was ever touched (message_custom = true on any edit regardless of final value) — rejected because it misrepresents what was actually sent to the patient.
 
 ---
 
@@ -109,13 +115,5 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 
 ---
 
-### Q8 — message_custom flag on revert
-**Status:** Open — resolve at Day 3 morning sync
-**Question:** If a coordinator edits the message text in the preview modal and then reverts to the original template text before confirming, is message_custom = TRUE or FALSE in the audit row?
-**Owner:** Backend dev (Chris) + Frontend dev (Jill)
-**Note:** Decide this at the Day 3 integration sync before either side builds the modal confirm logic.
-**Resolution:** *(fill in)*
-
----
 
 *DECISIONS.md · v2.0 · July 2026 · Update when open items resolve — do not close silently*
