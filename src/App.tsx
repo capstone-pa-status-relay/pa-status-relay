@@ -12,6 +12,7 @@ import {
   getPatientMessage,
   type PaStatus,
 } from "./backend/statusMachine";
+import { type AuditEntry } from "./backend/apiTypes";
 import { supabase } from "./lib/supabase";
 
 type CaseListItem = {
@@ -1013,55 +1014,24 @@ interface TimelineNode {
   metadata?: MetadataCardProps;
 }
 
-const TIMELINE_NODES: TimelineNode[] = [
-  {
-    id: "n1",
-    timestamp: "Jul 20, 2026 · 9:14 AM",
-    actor: "Demo Coordinator",
+function auditEntryToNode(entry: AuditEntry): TimelineNode {
+  const d = new Date(entry.timestamp);
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return {
+    id: entry.id,
+    timestamp: `${date} · ${time}`,
+    actor: entry.actor_label,
     type: "transition",
-    from: "submitted",
-    to: "approved",
+    from: entry.from_status ?? undefined,
+    to: entry.to_status,
     metadata: {
-      reasonCode: "",
-      messageSent: true,
-      messageCustom: false,
-      messageText: "Your treatment is approved. Scheduling will contact you next.",
+      reasonCode: entry.reason_code ?? undefined,
+      messageSent: entry.message_sent,
+      messageCustom: entry.message_custom,
     },
-  },
-  {
-    id: "n2",
-    timestamp: "Jul 20, 2026 · 8:55 AM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "pending_review",
-    to: "submitted",
-    metadata: {
-      docLink: "intake-docs.example.com/okafor-1041",
-      messageSent: true,
-      messageCustom: false,
-    },
-  },
-  {
-    id: "n3",
-    timestamp: "Jul 19, 2026 · 3:40 PM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "pending_review",
-    to: "pending_review",
-    metadata: {
-      reasonCode: "clinical_notes_complete",
-      messageSent: true,
-      messageCustom: false,
-    },
-  },
-  {
-    id: "n4",
-    timestamp: "Jul 19, 2026 · 3:38 PM",
-    actor: "Demo Coordinator",
-    type: "demo",
-    demoLabel: "Case reset to baseline",
-  },
-];
+  };
+}
 
 function NeedsDocsBadge() {
   return (
@@ -1182,9 +1152,10 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
 }
 
 // IMMUTABLE: no edit or delete controls rendered per audit trail spec
-function AuditDrawer({ onClose, selectedCase }: {
+function AuditDrawer({ onClose, selectedCase, entries }: {
   onClose: () => void;
   selectedCase: CaseListItem | null;
+  entries: AuditEntry[];
 }) {
   const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
   const [filterActor, setFilterActor] = useState<string | null>(null);
@@ -1327,9 +1298,16 @@ function AuditDrawer({ onClose, selectedCase }: {
 
         {/* Timeline */}
         <div className="flex flex-col">
-          {TIMELINE_NODES.map((node, i) => (
-            <TimelineNodeRow key={node.id} node={node} isLast={i === TIMELINE_NODES.length - 1} />
-          ))}
+          {entries.length === 0 ? (
+            <span className="text-[13px] leading-[1.5]" style={{ color: "#718096", fontFamily: "Inter, sans-serif" }}>
+              No audit entries yet. Transitions will appear here.
+            </span>
+          ) : (
+            entries.map((entry, i) => {
+              const node = auditEntryToNode(entry);
+              return <TimelineNodeRow key={node.id} node={node} isLast={i === entries.length - 1} />;
+            })
+          )}
         </div>
 
       </div>
@@ -1597,6 +1575,7 @@ export default function App() {
   const [pendingToStatus, setPendingToStatus] = useState<PaStatus | null>(null);
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [successBanner, setSuccessBanner] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
   const [errorBanner, setErrorBanner] = useState<{ message: string; visible: boolean; retry: (() => void) | null }>({ message: "", visible: false, retry: null });
 
@@ -1690,6 +1669,7 @@ export default function App() {
       }
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
+      setAuditEntries((prev) => [data.audit_entry as AuditEntry, ...prev]);
       setSuccessBanner({ message: `Status updated to ${BADGE_CONFIG[data.case.status as PaStatus]?.label ?? data.case.status}`, visible: true });
       setErrorBanner({ message: "", visible: false, retry: null });
       // TODO: refetch audit trail when audit API is wired
@@ -2234,7 +2214,7 @@ export default function App() {
           aria-modal="true"
           aria-label="Audit trail"
         >
-          <AuditDrawer onClose={() => setAuditOpen(false)} selectedCase={cases.find(c => c.id === selectedCaseId) ?? null} />
+          <AuditDrawer onClose={() => setAuditOpen(false)} selectedCase={cases.find(c => c.id === selectedCaseId) ?? null} entries={auditEntries} />
         </div>
 
         {/* Dev-only: audit trail affordance — decide by Day 4 whether this earns a real home */}
