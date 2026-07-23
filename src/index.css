@@ -18,9 +18,8 @@
   --mono: ui-monospace, Consolas, monospace;
 
   /* ── PA Design System Tokens ─────────────────────────────────── */
-  --pa-primary:       #1B4F72;
-  --pa-primary-hover: #154360;
-  --pa-primary-subtle:#D6E4F0;
+  --pa-primary-hover: #1D4ED8;
+  --pa-primary-subtle:#DBEAFE;
   --pa-surface:       #FFFFFF;
   --pa-surface-alt:   #F4F6F8;
   --pa-surface-panel: #EBF0F4;
