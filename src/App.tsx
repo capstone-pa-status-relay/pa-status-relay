@@ -12,6 +12,7 @@ import {
   getPatientMessage,
   type PaStatus,
 } from "./backend/statusMachine";
+import { supabase } from "./lib/supabase";
 
 // ── Design System: Section 7 Badge Config ────────────────────────────────────
 const BADGE_CONFIG = {
@@ -1474,7 +1475,23 @@ export default function App() {
   const [modalMessageText, setModalMessageText] = useState(MESSAGE_COPY);
   const [auditOpen, setAuditOpen] = useState(false);
   const [showCreateCase, setShowCreateCase] = useState(false);
-  const [cases, setCases] = useState(CASES_SEED);
+  const [cases, setCases] = useState<typeof CASES_SEED>([]);
+
+  useEffect(() => {
+    const fetchCases = async () => {
+      const { data, error } = await supabase
+        .from('cases')
+        .select('id, patient_name, status, consent_flag, updated_at')
+        .order('updated_at', { ascending: false })
+
+      if (error) {
+        console.error('fetch cases error:', error.message)
+        return
+      }
+      if (data) setCases(data)
+    }
+    fetchCases()
+  }, [])
 
   useEffect(() => {
     if (!document.querySelector('link[data-pa-font]')) {
