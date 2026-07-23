@@ -14,6 +14,14 @@ import {
 } from "./backend/statusMachine";
 import { supabase } from "./lib/supabase";
 
+type CaseListItem = {
+  id: string;
+  patient_name: string;
+  status: PaStatus;
+  consent_flag: boolean;
+  updated_at: string;
+};
+
 // ── Design System: Section 7 Badge Config ────────────────────────────────────
 const BADGE_CONFIG = {
   new_order:           { label: "New Order",           Icon: PlusCircle,   bg: "var(--pa-badge-new-bg)",        text: "var(--pa-badge-new-text)",       border: "var(--pa-badge-new-border)"       },
@@ -61,16 +69,6 @@ function StatusBadge({ status, size = "default" }: { status: PAStatus; size?: "d
 }
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
-const CASES_SEED = [
-  { id: "1", name: "Marcus Okafor",     drug: "Pembrolizumab", status: "approved"           as PAStatus, updated: "Jul 18, 2026 9:14 AM",  consent_flag: true  },
-  { id: "2", name: "Tanya Hargrove",    drug: "Rituximab",     status: "peer_to_peer"        as PAStatus, updated: "Jul 19, 2026 2:30 PM",  consent_flag: true  },
-  { id: "3", name: "Rafael Castellano", drug: "Bevacizumab",   status: "denied"              as PAStatus, updated: "Jul 20, 2026 8:02 AM",  consent_flag: true  },
-  { id: "4", name: "Linh Nguyen",       drug: "Nivolumab",     status: "submitted"           as PAStatus, updated: "Jul 20, 2026 10:45 AM", consent_flag: false },
-  { id: "5", name: "David Mbeki",       drug: "Trastuzumab",   status: "pending_review"      as PAStatus, updated: "Jul 19, 2026 11:20 AM", consent_flag: false },
-  { id: "6", name: "Anna Kowalski",     drug: "Ipilimumab",    status: "needs_documentation" as PAStatus, updated: "Jul 17, 2026 3:55 PM",  consent_flag: false },
-  { id: "7", name: "Pedro Reyes",       drug: "Atezolizumab",  status: "info_request"        as PAStatus, updated: "Jul 20, 2026 7:30 AM",  consent_flag: true  },
-  { id: "8", name: "Sara Johansson",    drug: "Durvalumab",    status: "closed"              as PAStatus, updated: "Jul 15, 2026 4:00 PM",  consent_flag: true  },
-];
 
 const ALL_STATUSES = Object.keys(BADGE_CONFIG) as PAStatus[];
 
@@ -549,13 +547,11 @@ const GATE_FIELD_LABELS: Record<string, string> = {
 
 function StatusDrawer({
   onClose,
-  consentActive,
   onOpenModal,
   onLogOnly,
   currentStatus,
 }: {
   onClose: () => void;
-  consentActive: boolean;
   onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
   onLogOnly: (toStatus: PaStatus, meta: TransitionMeta) => void;
   currentStatus: PaStatus;
@@ -1188,7 +1184,7 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
 // IMMUTABLE: no edit or delete controls rendered per audit trail spec
 function AuditDrawer({ onClose, selectedCase }: {
   onClose: () => void;
-  selectedCase: typeof CASES_SEED[number] | null;
+  selectedCase: CaseListItem | null;
 }) {
   const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
   const [filterActor, setFilterActor] = useState<string | null>(null);
@@ -1261,7 +1257,7 @@ function AuditDrawer({ onClose, selectedCase }: {
           <dl className="grid gap-x-6 gap-y-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Patient</dt>
-              <dd className="text-[14px] font-medium leading-[1.43]" style={{ color: "#1A1F2E" }}>{selectedCase?.name ?? "—"}</dd>
+              <dd className="text-[14px] font-medium leading-[1.43]" style={{ color: "#1A1F2E" }}>{selectedCase?.patient_name ?? "—"}</dd>
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Case ID</dt>
@@ -1272,7 +1268,7 @@ function AuditDrawer({ onClose, selectedCase }: {
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Drug</dt>
               <dd style={{ fontFamily: "JetBrains Mono, monospace", color: "#475569", fontWeight: 400, fontSize: "12px", lineHeight: "1.4" }}>
-                {selectedCase?.drug ?? "—"}
+                {"—"}
               </dd>
             </div>
             <div className="flex flex-col gap-0.5">
@@ -1602,20 +1598,22 @@ export default function App() {
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
   const [showCreateCase, setShowCreateCase] = useState(false);
-  const [cases, setCases] = useState<typeof CASES_SEED>([]);
+  const [cases, setCases] = useState<CaseListItem[]>([]);
 
   useEffect(() => {
     const fetchCases = async () => {
       const { data, error } = await supabase
         .from('cases')
-        .select('id, patient_name, status, consent_flag, updated_at')
+        .select('id, patient_name, current_status, consent_flag, updated_at')
         .order('updated_at', { ascending: false })
 
       if (error) {
         console.error('fetch cases error:', error.message)
         return
       }
-      if (data) setCases(data)
+      if (data) setCases(data.map(({ id, patient_name, current_status, consent_flag, updated_at }) => ({
+        id, patient_name, status: current_status as PaStatus, consent_flag, updated_at,
+      })))
     }
     fetchCases()
   }, [])
@@ -1634,7 +1632,7 @@ export default function App() {
   const filtered = cases.filter((c) => {
     const matchStatus = activeFilter === "all" || c.status === activeFilter;
     const q = search.toLowerCase();
-    const matchSearch = !q || c.name.toLowerCase().includes(q) || c.drug.toLowerCase().includes(q);
+    const matchSearch = !q || c.patient_name.toLowerCase().includes(q);
     return matchStatus && matchSearch;
   });
 
@@ -2018,7 +2016,7 @@ export default function App() {
                         className="flex items-center justify-center focus:outline-none rounded"
                         style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "#2563EB" : "#CBD5E1" }}
                         onClick={(e) => { e.stopPropagation(); toggleCheck(String(c.id)); }}
-                        aria-label={`Select ${c.name}`}
+                        aria-label={`Select ${c.patient_name}`}
                         onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
                         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
@@ -2041,7 +2039,7 @@ export default function App() {
                             fontFamily: "Inter, sans-serif",
                           }}
                         >
-                          {c.name}
+                          {c.patient_name}
                         </span>
                         <span
                           className="pa-mono"
@@ -2052,7 +2050,7 @@ export default function App() {
                             color: "#475569",
                           }}
                         >
-                          {c.drug}
+                          {"—"}
                         </span>
                       </div>
                     </td>
@@ -2080,7 +2078,7 @@ export default function App() {
                           color: "#64748B",
                         }}
                       >
-                        {c.updated}
+                        {c.updated_at}
                       </span>
                     </td>
 
@@ -2123,7 +2121,6 @@ export default function App() {
         >
           <StatusDrawer
             onClose={() => setDrawerOpen(false)}
-            consentActive={selectedCase?.consent_flag ?? true}
             onOpenModal={openModal}
             onLogOnly={handleLogOnly}
             currentStatus={(selectedCase?.status as PaStatus) ?? "new_order"}
