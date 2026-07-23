@@ -38,13 +38,13 @@ const BADGE_CONFIG = {
 type PAStatus = keyof typeof BADGE_CONFIG;
 
 // ── Status Badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status, size = "default" }: { status: PAStatus; size?: "default" | "sm" }) {
+function StatusBadge({ status, size = "default", className: animClass }: { status: PAStatus; size?: "default" | "sm"; className?: string }) {
   const { label, Icon, bg, text, border } = BADGE_CONFIG[status];
   const iconSize = size === "sm" ? 11 : 13;
   const extraClass = status === "needs_documentation" ? " pa-needs-docs-text" : "";
   return (
     <span
-      className={`inline-flex items-center gap-[6px] rounded-full whitespace-nowrap font-semibold${extraClass}`}
+      className={`inline-flex items-center gap-[6px] rounded-full whitespace-nowrap font-semibold${extraClass}${animClass ? ` ${animClass}` : ""}`}
       style={{
         backgroundColor: bg,
         color: text,
@@ -550,11 +550,15 @@ function StatusDrawer({
   onOpenModal,
   onLogOnly,
   currentStatus,
+  transitionError,
+  onClearError,
 }: {
   onClose: () => void;
   onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
   onLogOnly: (toStatus: PaStatus, meta: TransitionMeta) => void;
   currentStatus: PaStatus;
+  transitionError: string | null;
+  onClearError: () => void;
 }) {
   const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
     () => getValidTransitions(currentStatus)[0] ?? "closed",
@@ -609,6 +613,7 @@ function StatusDrawer({
             >
               Current status
             </span>
+            {/* TODO: hardcoded status — should derive from selectedCase.status */}
             <StatusBadge status="submitted" />
           </div>
         </div>
@@ -835,6 +840,43 @@ function StatusDrawer({
           </span>
         </div>
       </div>
+
+      {transitionError && (
+        <div
+          role="alert"
+          style={{
+            margin: "0 24px 12px",
+            padding: "10px 12px",
+            backgroundColor: "#FFF1F2",
+            border: "1px solid #FDA4AF",
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#BE123C", fontFamily: "Inter, sans-serif", lineHeight: 1.4 }}>
+            {transitionError}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              onClearError();
+              onLogOnly(
+                selectedTransition,
+                buildMeta(
+                  getTransitionGate(currentStatus, selectedTransition)?.field ?? null,
+                  docLink, reasonCode, appointmentLink, nextStepNote,
+                ),
+              );
+            }}
+            style={{ fontSize: 13, fontWeight: 500, color: "#BE123C", background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "Inter, sans-serif", flexShrink: 0 }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Footer */}
       <div
@@ -1273,7 +1315,7 @@ function AuditDrawer({ onClose, selectedCase }: {
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Status</dt>
-              <dd><StatusBadge status={selectedCase?.status ?? "closed"} /></dd>
+              <dd><StatusBadge key={selectedCase?.status ?? "closed"} status={selectedCase?.status ?? "closed"} className="pa-chip-animate" /></dd>
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Consent</dt>
@@ -1353,19 +1395,7 @@ function EmptyBodyNoCases({ onCreateCase }: { onCreateCase: () => void }) {
           marginBottom: 8,
         }}
       >
-        No cases yet.
-      </span>
-      <span
-        style={{
-          fontFamily: "Inter, sans-serif",
-          fontSize: 14,
-          fontWeight: 400,
-          lineHeight: "1.43",
-          color: "#475569",
-          marginBottom: 16,
-        }}
-      >
-        Create a case to start tracking authorizations.
+        No cases yet — add your first case to get started.
       </span>
       <button
         onClick={onCreateCase}
@@ -1599,6 +1629,7 @@ export default function App() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [cases, setCases] = useState<CaseListItem[]>([]);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCases = async () => {
@@ -1671,8 +1702,9 @@ export default function App() {
     messageSent: boolean,
     messageText: string | null,
     messageCustom: boolean,
-  ) {
-    if (!selectedCaseId) return;
+  ): Promise<boolean> {
+    setTransitionError(null);
+    if (!selectedCaseId) return false;
     try {
       const res = await fetch(`/api/cases/${selectedCaseId}/transition`, {
         method: "POST",
@@ -1682,19 +1714,23 @@ export default function App() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error("transition failed:", err.error, err.message);
-        return;
+        setTransitionError(err.message ?? "Status update failed. Check your connection and try again.");
+        return false;
       }
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
       // TODO: refetch audit trail when audit API is wired
+      return true;
     } catch (err) {
       console.error("transition error:", err);
+      setTransitionError("Connection error — changes weren't saved. Try again.");
+      return false;
     }
   }
 
   async function handleLogOnly(toStatus: PaStatus, meta: TransitionMeta) {
-    await postTransition(toStatus, meta, false, null, false);
-    setDrawerOpen(false);
+    const ok = await postTransition(toStatus, meta, false, null, false);
+    if (ok) setDrawerOpen(false);
   }
 
   function handleCreateCase() {
@@ -2062,7 +2098,7 @@ export default function App() {
 
                     {/* Status Badge */}
                     <td style={{ padding: "12px 16px" }}>
-                      <StatusBadge status={c.status} />
+                      <StatusBadge key={c.status} status={c.status} className="pa-chip-animate" />
                     </td>
 
                     {/* Consent */}
@@ -2125,10 +2161,12 @@ export default function App() {
           aria-label="Log status"
         >
           <StatusDrawer
-            onClose={() => setDrawerOpen(false)}
+            onClose={() => { setDrawerOpen(false); setTransitionError(null); }}
             onOpenModal={openModal}
             onLogOnly={handleLogOnly}
             currentStatus={(selectedCase?.status as PaStatus) ?? "new_order"}
+            transitionError={transitionError}
+            onClearError={() => setTransitionError(null)}
           />
         </div>
 
@@ -2215,15 +2253,19 @@ export default function App() {
             onConfirm={async () => {
               if (!pendingToStatus) return;
               const template = getPatientMessage(pendingToStatus);
-              await postTransition(pendingToStatus, pendingMeta, true, modalMessageText, modalMessageText !== template);
-              setModalOpen(false);
-              setDrawerOpen(false);
+              const ok = await postTransition(pendingToStatus, pendingMeta, true, modalMessageText, modalMessageText !== template);
+              if (ok) {
+                setModalOpen(false);
+                setDrawerOpen(false);
+              }
             }}
             onLogWithoutSending={async () => {
               if (!pendingToStatus) return;
-              await postTransition(pendingToStatus, pendingMeta, false, null, false);
-              setModalOpen(false);
-              setDrawerOpen(false);
+              const ok = await postTransition(pendingToStatus, pendingMeta, false, null, false);
+              if (ok) {
+                setModalOpen(false);
+                setDrawerOpen(false);
+              }
             }}
             onClose={() => setModalOpen(false)}
             onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
