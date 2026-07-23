@@ -535,7 +535,6 @@ function StatusDrawer({
     () => getPatientMessage(getValidTransitions(currentStatus)[0] ?? "closed"),
   );
   const [gateError, setGateError] = useState<string | null>(null);
-  const isEdited = messageText !== getPatientMessage(selectedTransition);
 
   useEffect(() => {
     setMessageText(getPatientMessage(selectedTransition));
@@ -680,7 +679,7 @@ function StatusDrawer({
 
           <textarea
             value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
+            readOnly
             rows={4}
             className="w-full rounded-md border px-3 py-2 resize-none"
             style={{
@@ -706,9 +705,7 @@ function StatusDrawer({
           <span
             style={{ fontSize: "12px", fontWeight: 500, color: "#64748B", lineHeight: 1.4 }}
           >
-            {isEdited
-              ? "Edited messages are flagged in the audit trail."
-              : "Edited messages are flagged in the audit trail."}
+            Patient-facing edits are completed in the confirmation modal.
           </span>
         </div>
 
