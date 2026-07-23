@@ -1597,6 +1597,13 @@ export default function App() {
   const [pendingToStatus, setPendingToStatus] = useState<PaStatus | null>(null);
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
+  const [successBanner, setSuccessBanner] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
+
+  useEffect(() => {
+    if (!successBanner.visible) return;
+    const timer = setTimeout(() => setSuccessBanner((b) => ({ ...b, visible: false })), 4000);
+    return () => clearTimeout(timer);
+  }, [successBanner.visible, successBanner.message]);
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [cases, setCases] = useState<CaseListItem[]>([]);
 
@@ -1681,6 +1688,7 @@ export default function App() {
       }
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
+      setSuccessBanner({ message: `Status updated to ${BADGE_CONFIG[data.case.status as PaStatus]?.label ?? data.case.status}`, visible: true });
       // TODO: refetch audit trail when audit API is wired
     } catch (err) {
       console.error("transition error:", err);
@@ -1883,6 +1891,37 @@ export default function App() {
         </div>
 
         {/* Filter Chip Bar */}
+        {/* Success banner — scoped to case panel, auto-dismisses after 4s */}
+        {successBanner.visible && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 24px",
+              backgroundColor: "var(--pa-badge-approved-bg)",
+              borderBottom: "1px solid var(--pa-badge-approved-border)",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "var(--pa-badge-approved-text)",
+              fontFamily: "Inter, sans-serif",
+              flexShrink: 0,
+            }}
+          >
+            <span>{successBanner.message}</span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setSuccessBanner((b) => ({ ...b, visible: false }))}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--pa-badge-approved-text)", display: "flex", alignItems: "center" }}
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
         <div
           className="pa-chip-bar flex items-center gap-2 px-6 shrink-0"
           style={{
