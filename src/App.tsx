@@ -1354,19 +1354,7 @@ function EmptyBodyNoCases({ onCreateCase }: { onCreateCase: () => void }) {
           marginBottom: 8,
         }}
       >
-        No cases yet.
-      </span>
-      <span
-        style={{
-          fontFamily: "Inter, sans-serif",
-          fontSize: 14,
-          fontWeight: 400,
-          lineHeight: "1.43",
-          color: "#475569",
-          marginBottom: 16,
-        }}
-      >
-        Create a case to start tracking authorizations.
+        No cases yet — add your first case to get started.
       </span>
       <button
         onClick={onCreateCase}
