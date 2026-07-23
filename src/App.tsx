@@ -38,13 +38,13 @@ const BADGE_CONFIG = {
 type PAStatus = keyof typeof BADGE_CONFIG;
 
 // ── Status Badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status, size = "default" }: { status: PAStatus; size?: "default" | "sm" }) {
+function StatusBadge({ status, size = "default", className: animClass }: { status: PAStatus; size?: "default" | "sm"; className?: string }) {
   const { label, Icon, bg, text, border } = BADGE_CONFIG[status];
   const iconSize = size === "sm" ? 11 : 13;
   const extraClass = status === "needs_documentation" ? " pa-needs-docs-text" : "";
   return (
     <span
-      className={`inline-flex items-center gap-[6px] rounded-full whitespace-nowrap font-semibold${extraClass}`}
+      className={`inline-flex items-center gap-[6px] rounded-full whitespace-nowrap font-semibold${extraClass}${animClass ? ` ${animClass}` : ""}`}
       style={{
         backgroundColor: bg,
         color: text,
@@ -609,6 +609,7 @@ function StatusDrawer({
             >
               Current status
             </span>
+            {/* TODO: hardcoded status — should derive from selectedCase.status */}
             <StatusBadge status="submitted" />
           </div>
         </div>
@@ -1273,7 +1274,7 @@ function AuditDrawer({ onClose, selectedCase }: {
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Status</dt>
-              <dd><StatusBadge status={selectedCase?.status ?? "closed"} /></dd>
+              <dd><StatusBadge key={selectedCase?.status ?? "closed"} status={selectedCase?.status ?? "closed"} className="pa-chip-animate" /></dd>
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Consent</dt>
@@ -2062,7 +2063,7 @@ export default function App() {
 
                     {/* Status Badge */}
                     <td style={{ padding: "12px 16px" }}>
-                      <StatusBadge status={c.status} />
+                      <StatusBadge key={c.status} status={c.status} className="pa-chip-animate" />
                     </td>
 
                     {/* Consent */}
