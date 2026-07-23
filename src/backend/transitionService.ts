@@ -55,13 +55,14 @@ export function prepareTransition(
   actor: TransitionActor,
   timestamp: IsoTimestamp,
 ): PrepareTransitionResult {
+  const metadata = normalizeTransitionMetadata(request);
   const validation = validateTransition({
     from_status: currentCase.status,
     to_status: request.to_status,
-    doc_link: request.doc_link,
-    reason_code: request.reason_code,
-    appointment_link: request.appointment_link,
-    next_step_note: request.next_step_note,
+    doc_link: metadata.doc_link,
+    reason_code: metadata.reason_code,
+    appointment_link: metadata.appointment_link,
+    next_step_note: metadata.next_step_note,
   });
 
   if (!validation.ok) {
@@ -76,9 +77,9 @@ export function prepareTransition(
     id: currentCase.id,
     status: request.to_status,
     updated_at: timestamp,
-    doc_link: coalesceNullable(request.doc_link, currentCase.doc_link),
-    appointment_link: coalesceNullable(request.appointment_link, currentCase.appointment_link),
-    next_step_note: coalesceNullable(request.next_step_note, currentCase.next_step_note),
+    doc_link: coalesceNullable(metadata.doc_link, currentCase.doc_link),
+    appointment_link: coalesceNullable(metadata.appointment_link, currentCase.appointment_link),
+    next_step_note: coalesceNullable(metadata.next_step_note, currentCase.next_step_note),
   };
 
   const auditInsert: TransitionAuditInsertDraft = {
@@ -88,8 +89,8 @@ export function prepareTransition(
     actor_id: actor.actor_id,
     actor_label: actor.actor_label,
     timestamp,
-    reason_code: request.reason_code ?? null,
-    doc_link: request.doc_link ?? null,
+    reason_code: metadata.reason_code ?? null,
+    doc_link: metadata.doc_link ?? null,
     message_sent: effectiveMessage.message_sent,
     message_text: effectiveMessage.message_text,
     message_custom: effectiveMessage.message_custom,
@@ -123,6 +124,20 @@ export function prepareTransition(
         audit_entry: auditEntry,
       },
     },
+  };
+}
+
+type TransitionMetadata = Pick<
+  TransitionCaseRequest,
+  "doc_link" | "reason_code" | "appointment_link" | "next_step_note"
+>;
+
+function normalizeTransitionMetadata(request: TransitionMetadata): TransitionMetadata {
+  return {
+    doc_link: normalizeOptionalText(request.doc_link),
+    reason_code: normalizeOptionalText(request.reason_code),
+    appointment_link: normalizeOptionalText(request.appointment_link),
+    next_step_note: normalizeOptionalText(request.next_step_note),
   };
 }
 
@@ -162,4 +177,14 @@ export function resolveConfirmedMessage(
 
 function coalesceNullable(nextValue: string | null | undefined, currentValue: string | null): string | null {
   return nextValue ?? currentValue;
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | null | undefined {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed.length > 0 ? trimmed : null;
 }

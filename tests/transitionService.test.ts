@@ -272,6 +272,83 @@ test("defaults missing sent message text to the locked template", () => {
   assert.equal(result.transition.audit_insert.message_custom, false);
 });
 
+test("trims transition metadata before validation and draft creation", () => {
+  const result = prepareTransition(
+    baseCase,
+    {
+      to_status: "submitted",
+      doc_link: "  uploaded-intake-packet  ",
+      message_text: null,
+      message_sent: false,
+      message_custom: false,
+    },
+    actor,
+    timestamp,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+
+  assert.equal(result.transition.case_update.doc_link, "uploaded-intake-packet");
+  assert.equal(result.transition.audit_insert.doc_link, "uploaded-intake-packet");
+});
+
+test("trims reason code metadata before writing the audit draft", () => {
+  const result = prepareTransition(
+    {
+      ...baseCase,
+      status: "pending_review",
+    },
+    {
+      to_status: "denied",
+      reason_code: "  payer_requested_more_info  ",
+      message_text: null,
+      message_sent: false,
+      message_custom: false,
+    },
+    actor,
+    timestamp,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+
+  assert.equal(result.transition.audit_insert.reason_code, "payer_requested_more_info");
+});
+
+test("treats blank optional metadata as absent without replacing existing case metadata", () => {
+  const result = prepareTransition(
+    {
+      ...baseCase,
+      status: "pending_review",
+      doc_link: "existing-doc",
+    },
+    {
+      to_status: "approved",
+      doc_link: "   ",
+      reason_code: "   ",
+      message_text: null,
+      message_sent: false,
+      message_custom: false,
+    },
+    actor,
+    timestamp,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+
+  assert.equal(result.transition.case_update.doc_link, "existing-doc");
+  assert.equal(result.transition.audit_insert.doc_link, null);
+  assert.equal(result.transition.audit_insert.reason_code, null);
+});
+
 test("resolves confirmed message fields from final modal text", () => {
   assert.deepEqual(resolveConfirmedMessage("approved", "Your treatment is approved. Scheduling will contact you next."), {
     message_text: "Your treatment is approved. Scheduling will contact you next.",
