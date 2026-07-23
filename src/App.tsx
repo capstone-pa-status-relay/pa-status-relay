@@ -87,9 +87,9 @@ function FilterChip({
   onClick: () => void;
 }) {
   const config = status ? BADGE_CONFIG[status] : null;
-  const activeBg     = config ? config.bg     : "var(--pa-primary)";
+  const activeBg     = config ? config.bg     : "#2563EB";
   const activeText   = config ? config.text   : "#FFFFFF";
-  const activeBorder = config ? config.border : "rgba(27,79,114,0.30)";
+  const activeBorder = config ? config.border : "rgba(37,99,235,0.30)";
   const Icon = config ? config.Icon : null;
 
   const restBg     = "#F1F5F9";
@@ -113,7 +113,7 @@ function FilterChip({
       onClick={onClick}
       onMouseEnter={(e) => applyHover(e.currentTarget)}
       onMouseLeave={(e) => removeHover(e.currentTarget)}
-      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap transition-colors duration-100 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--pa-primary)]"
+      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap transition-colors duration-100 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#2563EB]"
       style={{
         fontSize: "11px",
         fontWeight: 600,
@@ -164,8 +164,8 @@ function TransitionDropdown({
         onClick={() => setOpen((p) => !p)}
         className="w-full flex items-center justify-between px-3 py-2 rounded-md border text-left"
         style={{
-          borderColor: open ? "var(--pa-primary)" : "#CBD5E1",
-          boxShadow: open ? "0 0 0 2px var(--pa-primary)" : "none",
+          borderColor: open ? "#2563EB" : "#CBD5E1",
+          boxShadow: open ? "0 0 0 2px #2563EB" : "none",
           backgroundColor: "#FFFFFF",
           height: "36px",
           outline: "none",
@@ -236,7 +236,7 @@ function TransitionDropdown({
                 )}
               </div>
               {option === value && (
-                <Check size={14} style={{ color: "var(--pa-primary)", flexShrink: 0 }} />
+                <Check size={14} style={{ color: "#2563EB", flexShrink: 0 }} />
               )}
             </li>
           ))}
@@ -256,7 +256,7 @@ const DS = {
   textPrimary:       "#0F172A",
   textMuted:         "#64748B",
   textDisabled:      "#94A3B8",
-  brandPrimary:      "var(--pa-primary)",
+  brandPrimary:      "#2563EB",
   brandPrimaryHover: "var(--pa-primary-hover)",
   brandOnPrimary:    "#FFFFFF",
   secondaryBg:       "#FFFFFF",
@@ -518,15 +518,46 @@ function MessagePreviewModal({
 }
 
 // ── Status Drawer ─────────────────────────────────────────────────────────────
+type TransitionMeta = {
+  doc_link: string | null;
+  reason_code: string | null;
+  appointment_link: string | null;
+  next_step_note: string | null;
+};
+
+function buildMeta(
+  gateField: string | null,
+  docLink: string,
+  reasonCode: string,
+  appointmentLink: string,
+  nextStepNote: string,
+): TransitionMeta {
+  return {
+    doc_link:         gateField === "doc_link"         ? (docLink.trim() || null)         : null,
+    reason_code:      gateField === "reason_code"      ? (reasonCode.trim() || null)      : null,
+    appointment_link: gateField === "appointment_link" ? (appointmentLink.trim() || null) : null,
+    next_step_note:   gateField === "next_step_note"   ? (nextStepNote.trim() || null)    : null,
+  };
+}
+
+const GATE_FIELD_LABELS: Record<string, string> = {
+  doc_link: "Documentation",
+  reason_code: "Reason code",
+  appointment_link: "Appointment link",
+  next_step_note: "Next step note",
+};
+
 function StatusDrawer({
   onClose,
   consentActive,
   onOpenModal,
+  onLogOnly,
   currentStatus,
 }: {
   onClose: () => void;
   consentActive: boolean;
-  onOpenModal: (text: string) => void;
+  onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
+  onLogOnly: (toStatus: PaStatus, meta: TransitionMeta) => void;
   currentStatus: PaStatus;
 }) {
   const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
@@ -535,11 +566,16 @@ function StatusDrawer({
   const [messageText, setMessageText] = useState(
     () => getPatientMessage(getValidTransitions(currentStatus)[0] ?? "closed"),
   );
-  const [gateError, setGateError] = useState<string | null>(null);
+  const [gateError,       setGateError]       = useState<string | null>(null);
+  const [docLink,         setDocLink]         = useState("");
+  const [reasonCode,      setReasonCode]      = useState("");
+  const [appointmentLink, setAppointmentLink] = useState("");
+  const [nextStepNote,    setNextStepNote]    = useState("");
 
   useEffect(() => {
     setMessageText(getPatientMessage(selectedTransition));
     setGateError(null);
+    setDocLink(""); setReasonCode(""); setAppointmentLink(""); setNextStepNote("");
   }, [selectedTransition]);
 
   return (
@@ -661,6 +697,73 @@ function StatusDrawer({
           )}
         </div>
 
+        {/* Gate field input — visible only when the selected transition requires it */}
+        {(() => {
+          const gate = getTransitionGate(currentStatus, selectedTransition);
+          if (!gate) return null;
+          const label = GATE_FIELD_LABELS[gate.field] ?? gate.field;
+          const inputStyle = {
+            fontSize: "14px",
+            fontWeight: 400 as const,
+            color: "#0F172A",
+            lineHeight: 1.43,
+            fontFamily: "Inter, sans-serif",
+            borderColor: "#CBD5E1",
+            backgroundColor: "#FFFFFF",
+            outline: "none",
+            width: "100%",
+            borderRadius: "6px",
+            border: "1px solid #CBD5E1",
+            padding: "6px 12px",
+            boxSizing: "border-box" as const,
+          };
+          const onFocus = (e: React.FocusEvent<HTMLElement>) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "#2563EB";
+            (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 2px rgba(37,99,235,0.15)";
+          };
+          const onBlur = (e: React.FocusEvent<HTMLElement>) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "#CBD5E1";
+            (e.currentTarget as HTMLElement).style.boxShadow = "none";
+          };
+          return (
+            <div className="flex flex-col gap-1.5">
+              <span style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43, display: "block" }}>
+                {label}<span style={{ color: "#B45309", marginLeft: 2 }}>*</span>
+              </span>
+              {gate.field === "next_step_note" ? (
+                <textarea
+                  value={nextStepNote}
+                  onChange={(e) => setNextStepNote(e.target.value)}
+                  placeholder="Required for this transition"
+                  rows={3}
+                  className="resize-none"
+                  style={{ ...inputStyle, height: "auto" }}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                />
+              ) : (
+                <input
+                  type="text"
+                  value={
+                    gate.field === "doc_link" ? docLink
+                    : gate.field === "reason_code" ? reasonCode
+                    : appointmentLink
+                  }
+                  onChange={(e) => {
+                    if (gate.field === "doc_link") setDocLink(e.target.value);
+                    else if (gate.field === "reason_code") setReasonCode(e.target.value);
+                    else setAppointmentLink(e.target.value);
+                  }}
+                  placeholder="Required for this transition"
+                  style={{ ...inputStyle, height: "36px" }}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                />
+              )}
+            </div>
+          );
+        })()}
+
         {/* Message preview card */}
         <div
           className="flex flex-col gap-3 rounded-lg border p-4"
@@ -694,8 +797,8 @@ function StatusDrawer({
               outline: "none",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--pa-primary)";
-              e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)";
+              e.currentTarget.style.borderColor = "#2563EB";
+              e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB";
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#CBD5E1";
@@ -746,9 +849,13 @@ function StatusDrawer({
           type="button"
           onClick={() => {
             const gate = getTransitionGate(currentStatus, selectedTransition);
-            if (gate) { setGateError(gate.message); return; }
+            const activeValue = gate?.field === "doc_link" ? docLink
+              : gate?.field === "reason_code" ? reasonCode
+              : gate?.field === "appointment_link" ? appointmentLink
+              : gate?.field === "next_step_note" ? nextStepNote : "";
+            if (gate && !activeValue.trim()) { setGateError(gate.message); return; }
             setGateError(null);
-            onClose();
+            onLogOnly(selectedTransition, buildMeta(gate?.field ?? null, docLink, reasonCode, appointmentLink, nextStepNote));
           }}
           className="px-4 rounded-md border"
           style={{
@@ -780,13 +887,15 @@ function StatusDrawer({
 
         <button
           type="button"
-          disabled={!consentActive}
-          title={!consentActive ? "Record patient consent to enable message delivery" : undefined}
           onClick={() => {
             const gate = getTransitionGate(currentStatus, selectedTransition);
-            if (gate) { setGateError(gate.message); return; }
+            const activeValue = gate?.field === "doc_link" ? docLink
+              : gate?.field === "reason_code" ? reasonCode
+              : gate?.field === "appointment_link" ? appointmentLink
+              : gate?.field === "next_step_note" ? nextStepNote : "";
+            if (gate && !activeValue.trim()) { setGateError(gate.message); return; }
             setGateError(null);
-            if (consentActive) onOpenModal(messageText);
+            onOpenModal(messageText, selectedTransition, buildMeta(gate?.field ?? null, docLink, reasonCode, appointmentLink, nextStepNote));
           }}
           className="px-4 rounded-md"
           style={{
@@ -794,29 +903,24 @@ function StatusDrawer({
             fontSize: "14px",
             fontWeight: 500,
             color: "#FFFFFF",
-            backgroundColor: "var(--pa-primary)",
+            backgroundColor: "#2563EB",
             border: "1px solid transparent",
-            cursor: consentActive ? "pointer" : "not-allowed",
+            cursor: "pointer",
             lineHeight: 1.43,
             fontFamily: "Inter, sans-serif",
-            opacity: consentActive ? 1 : 0.45,
           }}
-          onMouseEnter={(e) => {
-            if (consentActive)
-              (e.currentTarget as HTMLElement).style.backgroundColor = "var(--pa-primary-hover)";
-          }}
-          onMouseLeave={(e) => {
-            if (consentActive)
-              (e.currentTarget as HTMLElement).style.backgroundColor = "var(--pa-primary)";
-          }}
-          onMouseDown={(e) => {
-            if (consentActive)
-              (e.currentTarget as HTMLElement).style.transform = "scale(0.98)";
-          }}
-          onMouseUp={(e) => {
-            if (consentActive)
-              (e.currentTarget as HTMLElement).style.transform = "scale(1)";
-          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--pa-primary-hover)")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLElement).style.backgroundColor = "#2563EB")
+          }
+          onMouseDown={(e) =>
+            ((e.currentTarget as HTMLElement).style.transform = "scale(0.98)")
+          }
+          onMouseUp={(e) =>
+            ((e.currentTarget as HTMLElement).style.transform = "scale(1)")
+          }
         >
           Confirm and send
         </button>
@@ -831,7 +935,7 @@ function FilterDropdown({ label }: { label: string }) {
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
+      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
       style={{
         color: "#4A5568",
         borderColor: "#CBD5E1",
@@ -878,7 +982,7 @@ function MetadataCard({ reasonCode, docLink, messageSent, messageCustom, message
             <dd style={{ fontFamily: "Inter, sans-serif", fontSize: "12px", lineHeight: "1.4" }}>
               <a
                 href="#"
-                style={{ color: "var(--pa-primary)", textDecoration: "underline", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
+                style={{ color: "#2563EB", textDecoration: "underline", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
               >
                 View document
                 <ExternalLink size={12} aria-hidden="true" />
@@ -1006,9 +1110,9 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
               width: 12,
               height: 12,
               borderRadius: "50%",
-              backgroundColor: "var(--pa-primary)",
+              backgroundColor: "#2563EB",
               border: "2px solid #FFFFFF",
-              boxShadow: "0 0 0 1.5px var(--pa-primary)",
+              boxShadow: "0 0 0 1.5px #2563EB",
             }}
           />
         )}
@@ -1082,7 +1186,25 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
 }
 
 // IMMUTABLE: no edit or delete controls rendered per audit trail spec
-function AuditDrawer({ onClose }: { onClose: () => void }) {
+function AuditDrawer({ onClose, selectedCase }: {
+  onClose: () => void;
+  selectedCase: typeof CASES_SEED[number] | null;
+}) {
+  const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
+  const [filterActor, setFilterActor] = useState<string | null>(null);
+  const [filterDateRange, setFilterDateRange] = useState<string | null>("last24h");
+
+  const activeParts: string[] = [];
+  if (filterActionType) activeParts.push(filterActionType);
+  if (filterActor) activeParts.push(filterActor);
+  if (filterDateRange === "last24h") activeParts.push("Last 24h");
+  else if (filterDateRange) activeParts.push(filterDateRange);
+
+  const caseIdDisplay = (() => {
+    const id = selectedCase?.id ?? "—";
+    return id.length > 20 ? id.slice(0, 20) + "…" : id;
+  })();
+
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
@@ -1112,7 +1234,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
           </div>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
             style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
             aria-label="Export CSV"
           >
@@ -1122,7 +1244,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center justify-center rounded-md w-8 h-8 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
+            className="flex items-center justify-center rounded-md w-8 h-8 transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
             style={{ color: "#718096" }}
             aria-label="Close audit trail"
           >
@@ -1139,23 +1261,23 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
           <dl className="grid gap-x-6 gap-y-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Patient</dt>
-              <dd className="text-[14px] font-medium leading-[1.43]" style={{ color: "#1A1F2E" }}>Marcus Okafor</dd>
+              <dd className="text-[14px] font-medium leading-[1.43]" style={{ color: "#1A1F2E" }}>{selectedCase?.name ?? "—"}</dd>
             </div>
             <div className="flex flex-col gap-0.5">
-              <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Case</dt>
-              <dd className="text-[14px] font-normal leading-[1.43]" style={{ color: "#1A1F2E", fontFamily: "JetBrains Mono, monospace" }}>
-                #1041
+              <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Case ID</dt>
+              <dd style={{ fontFamily: "JetBrains Mono, monospace", color: "#475569", fontWeight: 400, fontSize: "12px", lineHeight: "1.4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {caseIdDisplay}
               </dd>
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Drug</dt>
               <dd style={{ fontFamily: "JetBrains Mono, monospace", color: "#475569", fontWeight: 400, fontSize: "12px", lineHeight: "1.4" }}>
-                Pembrolizumab IV Infusion / Buy-and-Bill
+                {selectedCase?.drug ?? "—"}
               </dd>
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Status</dt>
-              <dd><StatusBadge status="approved" /></dd>
+              <dd><StatusBadge status={selectedCase?.status ?? "closed"} /></dd>
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Consent</dt>
@@ -1163,9 +1285,9 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
                 <span
                   className="inline-flex items-center rounded-full font-semibold"
                   style={{
-                    backgroundColor: "#D5F5E3",
-                    color: "#1E8449",
-                    border: "1px solid rgba(30,132,73,0.25)",
+                    backgroundColor: selectedCase?.consent_flag ? "#D5F5E3" : "#FFFBEB",
+                    color: selectedCase?.consent_flag ? "#1E8449" : "#92400E",
+                    border: selectedCase?.consent_flag ? "1px solid rgba(30,132,73,0.25)" : "1px solid #FCD34D",
                     fontSize: "11px",
                     fontWeight: 600,
                     lineHeight: 1,
@@ -1175,7 +1297,7 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
                     paddingBottom: "3px",
                   }}
                 >
-                  Active
+                  {selectedCase?.consent_flag ? "Active" : "Suppressed"}
                 </span>
               </dd>
             </div>
@@ -1189,19 +1311,22 @@ function AuditDrawer({ onClose }: { onClose: () => void }) {
             <FilterDropdown label="Actor" />
             <FilterDropdown label="Date range" />
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[12px] font-medium leading-[1.4]" style={{ color: "#4A5568", fontFamily: "Inter, sans-serif" }}>
-              Filtered by:{" "}
-              <span style={{ color: "#1A1F2E" }}>Status change · Today</span>
-            </span>
-            <button
-              type="button"
-              className="text-[12px] font-medium leading-[1.4] underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)] rounded"
-              style={{ color: "var(--pa-primary)" }}
-            >
-              Clear
-            </button>
-          </div>
+          {activeParts.length > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-medium leading-[1.4]" style={{ color: "#4A5568", fontFamily: "Inter, sans-serif" }}>
+                Filtered by:{" "}
+                <span style={{ color: "#1A1F2E" }}>{activeParts.join(" · ")}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => { setFilterActionType(null); setFilterActor(null); setFilterDateRange(null); }}
+                className="text-[12px] font-medium leading-[1.4] underline hover:no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] rounded"
+                style={{ color: "#2563EB" }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Timeline */}
@@ -1232,7 +1357,7 @@ function EmptyBodyNoCases({ onCreateCase }: { onCreateCase: () => void }) {
           marginBottom: 8,
         }}
       >
-        No cases yet
+        No cases yet.
       </span>
       <span
         style={{
@@ -1244,7 +1369,7 @@ function EmptyBodyNoCases({ onCreateCase }: { onCreateCase: () => void }) {
           marginBottom: 16,
         }}
       >
-        Add your first case to get started.
+        Create a case to start tracking authorizations.
       </span>
       <button
         onClick={onCreateCase}
@@ -1254,7 +1379,7 @@ function EmptyBodyNoCases({ onCreateCase }: { onCreateCase: () => void }) {
           gap: 6,
           height: 36,
           padding: "0 16px",
-          backgroundColor: "var(--pa-primary)",
+          backgroundColor: "#2563EB",
           color: "#FFFFFF",
           border: "none",
           borderRadius: 6,
@@ -1264,7 +1389,7 @@ function EmptyBodyNoCases({ onCreateCase }: { onCreateCase: () => void }) {
           cursor: "pointer",
         }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--pa-primary-hover)")}
-        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--pa-primary)")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.backgroundColor = "#2563EB")}
       >
         <Plus size={15} aria-hidden="true" />
         Create case
@@ -1396,7 +1521,7 @@ function CreateCaseModal({
               boxSizing: "border-box",
               outline: "none",
             }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
             onBlur={(e) => {
               setNameTouched(true);
               e.currentTarget.style.boxShadow = "none";
@@ -1425,7 +1550,7 @@ function CreateCaseModal({
             id="create-consent-flag"
             checked={consentFlag}
             onChange={(e) => setConsentFlag(e.target.checked)}
-            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "var(--pa-primary)" }}
+            style={{ width: 16, height: 16, cursor: "pointer", accentColor: "#2563EB" }}
           />
           <label
             htmlFor="create-consent-flag"
@@ -1473,6 +1598,8 @@ export default function App() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMessageText, setModalMessageText] = useState(MESSAGE_COPY);
+  const [pendingToStatus, setPendingToStatus] = useState<PaStatus | null>(null);
+  const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [cases, setCases] = useState<typeof CASES_SEED>([]);
@@ -1528,9 +1655,43 @@ export default function App() {
     setDrawerOpen(true);
   }
 
-  function openModal(text: string) {
+  function openModal(text: string, toStatus: PaStatus, meta: TransitionMeta) {
     setModalMessageText(text);
+    setPendingToStatus(toStatus);
+    setPendingMeta(meta);
     setModalOpen(true);
+  }
+
+  async function postTransition(
+    toStatus: PaStatus,
+    meta: TransitionMeta,
+    messageSent: boolean,
+    messageText: string | null,
+    messageCustom: boolean,
+  ) {
+    if (!selectedCaseId) return;
+    try {
+      const res = await fetch(`/api/cases/${selectedCaseId}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to_status: toStatus, ...meta, message_sent: messageSent, message_text: messageText, message_custom: messageCustom }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("transition failed:", err.error, err.message);
+        return;
+      }
+      const data = await res.json();
+      setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
+      // TODO: refetch audit trail when audit API is wired
+    } catch (err) {
+      console.error("transition error:", err);
+    }
+  }
+
+  async function handleLogOnly(toStatus: PaStatus, meta: TransitionMeta) {
+    await postTransition(toStatus, meta, false, null, false);
+    setDrawerOpen(false);
   }
 
   function handleCreateCase() {
@@ -1599,7 +1760,7 @@ export default function App() {
         >
           <div
             className="flex items-center justify-center rounded-md shrink-0"
-            style={{ width: 28, height: 28, backgroundColor: "var(--pa-primary)" }}
+            style={{ width: 28, height: 28, backgroundColor: "#2563EB" }}
           >
             <Layers size={15} color="#FFFFFF" aria-hidden="true" />
           </div>
@@ -1624,10 +1785,10 @@ export default function App() {
             style={{
               padding: "8px 12px",
               backgroundColor: "var(--pa-surface-panel)",
-              color: "var(--pa-primary)",
+              color: "#2563EB",
               fontSize: 14,
               fontWeight: 500,
-              border: "1px solid rgba(27,79,114,0.12)",
+              border: "1px solid rgba(37,99,235,0.12)",
             }}
           >
             <Layers size={15} aria-hidden="true" />
@@ -1693,7 +1854,7 @@ export default function App() {
                 border: "1px solid #CBD5E1",
                 fontFamily: "Inter, sans-serif",
               }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
+              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
               onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             />
           </div>
@@ -1707,15 +1868,15 @@ export default function App() {
               paddingRight: 14,
               fontSize: 13,
               fontWeight: 600,
-              backgroundColor: "var(--pa-primary)",
+              backgroundColor: "#2563EB",
               color: "#FFFFFF",
               border: "none",
               fontFamily: "Inter, sans-serif",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary)")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#2563EB")}
             onClick={handleCreateCase}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary), 0 0 0 4px rgba(27,79,114,0.2)")}
+            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)")}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             <PlusCircle size={14} aria-hidden="true" />
@@ -1855,10 +2016,10 @@ export default function App() {
                     <td style={{ padding: "12px 16px", width: 40 }}>
                       <button
                         className="flex items-center justify-center focus:outline-none rounded"
-                        style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "var(--pa-primary)" : "#CBD5E1" }}
+                        style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "#2563EB" : "#CBD5E1" }}
                         onClick={(e) => { e.stopPropagation(); toggleCheck(String(c.id)); }}
                         aria-label={`Select ${c.name}`}
-                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px var(--pa-primary)")}
+                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
                         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
                         {checked.has(String(c.id))
@@ -1964,6 +2125,7 @@ export default function App() {
             onClose={() => setDrawerOpen(false)}
             consentActive={selectedCase?.consent_flag ?? true}
             onOpenModal={openModal}
+            onLogOnly={handleLogOnly}
             currentStatus={(selectedCase?.status as PaStatus) ?? "new_order"}
           />
         </div>
@@ -1980,16 +2142,16 @@ export default function App() {
           aria-modal="true"
           aria-label="Audit trail"
         >
-          <AuditDrawer onClose={() => setAuditOpen(false)} />
+          <AuditDrawer onClose={() => setAuditOpen(false)} selectedCase={cases.find(c => c.id === selectedCaseId) ?? null} />
         </div>
 
-        {/* Demo affordance buttons */}
-        {!drawerOpen && !auditOpen && (
-          <div className="absolute bottom-6 right-6 z-10 flex gap-2">
+        {/* Dev-only: audit trail affordance — decide by Day 4 whether this earns a real home */}
+        {import.meta.env.DEV && !drawerOpen && !auditOpen && (
+          <div className="absolute bottom-6 right-6 z-10">
             <button
               type="button"
               onClick={() => setAuditOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
               style={{
                 backgroundColor: "#FFFFFF",
                 color: "#4A5568",
@@ -2000,21 +2162,6 @@ export default function App() {
             >
               <Layers size={13} aria-hidden="true" />
               Open audit trail
-            </button>
-            <button
-              type="button"
-              onClick={() => { setSelectedCaseId("1"); setDrawerOpen(true); }}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pa-primary)]"
-              style={{
-                backgroundColor: "#FFFFFF",
-                color: "#4A5568",
-                borderColor: "#CBD5E1",
-                boxShadow: "0 1px 3px rgba(15,23,42,0.08)",
-                fontFamily: "Inter, sans-serif",
-              }}
-            >
-              <Settings size={13} aria-hidden="true" />
-              Open status drawer
             </button>
           </div>
         )}
@@ -2063,12 +2210,16 @@ export default function App() {
             consentActive={selectedCase?.consent_flag ?? true}
             messageText={modalMessageText}
             onMessageChange={setModalMessageText}
-            onConfirm={() => {
-              console.log("message_sent=TRUE");
+            onConfirm={async () => {
+              if (!pendingToStatus) return;
+              const template = getPatientMessage(pendingToStatus);
+              await postTransition(pendingToStatus, pendingMeta, true, modalMessageText, modalMessageText !== template);
               setModalOpen(false);
               setDrawerOpen(false);
             }}
-            onLogWithoutSending={() => {
+            onLogWithoutSending={async () => {
+              if (!pendingToStatus) return;
+              await postTransition(pendingToStatus, pendingMeta, false, null, false);
               setModalOpen(false);
               setDrawerOpen(false);
             }}
