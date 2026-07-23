@@ -130,7 +130,7 @@ function getEffectiveMessageFields(
   currentCase: Pick<CaseDetail, "consent_flag">,
   request: TransitionCaseRequest,
 ): Pick<TransitionAuditInsertDraft, "message_sent" | "message_text" | "message_custom"> {
-  if (!currentCase.consent_flag) {
+  if (!currentCase.consent_flag || !request.message_sent) {
     return {
       message_sent: false,
       message_text: null,
@@ -138,23 +138,26 @@ function getEffectiveMessageFields(
     };
   }
 
+  const confirmedMessage = resolveConfirmedMessage(request.to_status, request.message_text);
+
   return {
-    message_sent: request.message_sent,
-    message_text: getAuditedMessageText(request),
-    message_custom: request.message_sent ? request.message_custom : false,
+    message_sent: true,
+    message_text: confirmedMessage.message_text,
+    message_custom: confirmedMessage.message_custom,
   };
 }
 
-function getAuditedMessageText(request: TransitionCaseRequest): string | null {
-  if (!request.message_sent) {
-    return null;
-  }
+export function resolveConfirmedMessage(
+  toStatus: PaStatus,
+  finalMessageText: string | null,
+): Pick<TransitionAuditInsertDraft, "message_text" | "message_custom"> {
+  const template = getPatientMessage(toStatus);
+  const messageText = finalMessageText ?? template;
 
-  if (request.message_custom) {
-    return request.message_text;
-  }
-
-  return getPatientMessage(request.to_status);
+  return {
+    message_text: messageText,
+    message_custom: messageText !== template,
+  };
 }
 
 function coalesceNullable(nextValue: string | null | undefined, currentValue: string | null): string | null {

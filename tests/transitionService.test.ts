@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { CaseDetail, TransitionCaseRequest } from "../src/backend/apiTypes.ts";
-import { prepareTransition, type TransitionActor } from "../src/backend/transitionService.ts";
+import {
+  prepareTransition,
+  resolveConfirmedMessage,
+  type TransitionActor,
+} from "../src/backend/transitionService.ts";
 
 const baseCase: CaseDetail = {
   id: "case_001",
@@ -159,7 +163,7 @@ test("forces message fields to unsent when consent is false", () => {
   assert.equal(result.transition.response.audit_entry.message_custom, false);
 });
 
-test("uses the locked template when a sent message is not custom", () => {
+test("computes custom message true when final confirmed text differs from the template", () => {
   const result = prepareTransition(
     {
       ...baseCase,
@@ -182,14 +186,39 @@ test("uses the locked template when a sent message is not custom", () => {
     return;
   }
 
-  assert.equal(
-    result.transition.audit_insert.message_text,
-    "Your insurance did not approve your request. Your care team will discuss next steps.",
+  assert.equal(result.transition.audit_insert.message_text, "Denied because of payer reason code ABC.");
+  assert.equal(result.transition.audit_insert.message_custom, true);
+});
+
+test("computes custom message false when edited text is reverted to the template", () => {
+  const template = "Your insurance did not approve your request. Your care team will discuss next steps.";
+  const result = prepareTransition(
+    {
+      ...baseCase,
+      status: "pending_review",
+      consent_flag: true,
+    },
+    {
+      to_status: "denied",
+      reason_code: "payer_denial",
+      message_text: template,
+      message_sent: true,
+      message_custom: true,
+    },
+    actor,
+    timestamp,
   );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+
+  assert.equal(result.transition.audit_insert.message_text, template);
   assert.equal(result.transition.audit_insert.message_custom, false);
 });
 
-test("preserves explicitly custom message text when consent is true", () => {
+test("preserves custom message text when consent is true", () => {
   const customMessage = "Your care team has an update and will contact you about next steps.";
   const result = prepareTransition(
     {
@@ -215,6 +244,49 @@ test("preserves explicitly custom message text when consent is true", () => {
 
   assert.equal(result.transition.audit_insert.message_text, customMessage);
   assert.equal(result.transition.audit_insert.message_custom, true);
+});
+
+test("defaults missing sent message text to the locked template", () => {
+  const result = prepareTransition(
+    baseCase,
+    {
+      to_status: "submitted",
+      doc_link: "https://example.test/mock-doc",
+      message_text: null,
+      message_sent: true,
+      message_custom: true,
+    },
+    actor,
+    timestamp,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+
+  assert.equal(
+    result.transition.audit_insert.message_text,
+    "Your PA request has been submitted and is under insurance review.",
+  );
+  assert.equal(result.transition.audit_insert.message_custom, false);
+});
+
+test("resolves confirmed message fields from final modal text", () => {
+  assert.deepEqual(resolveConfirmedMessage("approved", "Your treatment is approved. Scheduling will contact you next."), {
+    message_text: "Your treatment is approved. Scheduling will contact you next.",
+    message_custom: false,
+  });
+
+  assert.deepEqual(resolveConfirmedMessage("approved", "Scheduling will call you soon."), {
+    message_text: "Scheduling will call you soon.",
+    message_custom: true,
+  });
+
+  assert.deepEqual(resolveConfirmedMessage("approved", null), {
+    message_text: "Your treatment is approved. Scheduling will contact you next.",
+    message_custom: false,
+  });
 });
 
 test("keeps existing metadata when the transition request does not replace it", () => {
