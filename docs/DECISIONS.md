@@ -63,17 +63,49 @@ Running log of locked decisions with rationale and rejected alternatives. Update
 **Rejected:** Pull from auth.users metadata — only matters if multiple named reviewers interact on Day 5, which is not the plan.
 
 ### D10 — Design system tokens locked
-**Date:** July 2026 (Day 0)
-**Decision:** DESIGN_SYSTEM.md is complete and locked. All token, typography, spacing, radius, and component patterns defined. Safe to reference in Claude Code sessions.
-**Rationale:** Day 0 blocker resolved before any frontend CSS was written. Token system uses CSS custom properties (`--pa-*` namespace) not Tailwind utility classes. IBM Plex Sans (base) + IBM Plex Mono (timestamps, codes) as the font stack. Deep Navy + Sapphire direction for color palette.
-**Rejected:** Tailwind CSS utility classes — the DESIGN_SYSTEM.md Tailwind reference was a Gemini artifact; overridden by the locked CSS custom property system. Placeholder file with TBDs — explicitly avoided per CLAUDE.md constraint.
+**Date:** July 2026 (Day 0 design session)
+**Decision:** DESIGN_SYSTEM.md (`docs/DESIGN_SYSTEM.md`) is complete and locked. Styling uses **Tailwind CSS utility classes** (not CSS custom properties). Font stack is **Inter + JetBrains Mono** via Google Fonts. Color direction is **Deep Navy + Sapphire** — brand primary `#2563EB`, page background `#F8FAFC`, primary text `#0F172A`.
+**Rationale:** Inter chosen over IBM Plex Sans and DM Sans in a three-option design session comparison. Inter has tighter letter-spacing and crisper rendering at 11–13px — where case list rows, audit metadata, and status badges live all day. At those sizes, the difference is immediately visible in scan speed. JetBrains Mono chosen for audit trail timestamps and code values for high contrast against Inter body text. Tailwind chosen for consistency with the component architecture and faster iteration in a 5-day sprint.
+**Rejected:** IBM Plex Sans + IBM Plex Mono — lost the font comparison to Inter + JetBrains Mono. CSS custom property (`--pa-*`) namespace — the ui-design-SKILL draft used this system but it predated the design session and was superseded by the locked DESIGN_SYSTEM.md. Placeholder file with TBDs — explicitly avoided per CLAUDE.md constraint.
+**Note on code:** Any `--pa-primary` references in `App.tsx` are incorrect artifacts from applying the pre-session ui-design-SKILL. The correct Tailwind value for brand primary is `#2563EB` (`blue-600` / `brand-primary` token). These should be replaced with Tailwind classes or the correct hex per DESIGN_SYSTEM.md Section 3.
 
 ### D11 — Transition API commit point: modal is the commit point
-**Date:** July 2026 (Day 1, C1 resolution)
+**Date:** July 2026 (Day 1, C1 resolution) · **Updated:** Day 3 integration sync
 **Decision:** Version B confirmed. `POST /transition` fires at modal confirmation, not at StatusDrawer footer button click.
-- "Confirm and send" in StatusDrawer → opens modal → coordinator confirms → `POST /transition` fires with all fields including `message_text` and `message_custom`.
-- "Log status only" in StatusDrawer → fires `POST /transition` directly with `message_sent = false`, bypassing the modal entirely.
+- "Confirm and send" in StatusDrawer → validates metadata locally → opens MessagePreviewModal passing `to_status`, all metadata fields, and locked template message string → coordinator confirms → `POST /transition` fires.
+- "Log status only" in StatusDrawer → bypasses modal → calls `POST /transition` directly.
 - The StatusDrawer inline message preview is read-only. The modal is the editable confirm step and the API commit point.
+
+**Exact request body — "Confirm and send" path:**
+```json
+{
+  "to_status": "submitted",
+  "doc_link": "...",
+  "reason_code": null,
+  "appointment_link": null,
+  "next_step_note": null,
+  "message_text": "final confirmed modal text",
+  "message_sent": true,
+  "message_custom": true
+}
+```
+
+**Exact request body — "Log status only" path:**
+```json
+{
+  "to_status": "submitted",
+  "doc_link": "...",
+  "message_text": null,
+  "message_sent": false,
+  "message_custom": false
+}
+```
+
+**After successful response (both paths):**
+- Update status chip from `response.case.status`
+- Refetch audit trail: `GET /api/cases/:id/audit`
+- Render returned rows directly — backend returns reverse chronological order, no frontend sorting needed
+
 **Rationale:** Engineering Spec single request body includes `message_text` and `message_custom` — fields only known after modal interaction. Consistent with QA_SCENARIOS.md step-by-step expected outputs.
 **Rejected:** Version A (StatusDrawer is the commit point, modal is post-commit) — creates split between when the transition commits and when the message is confirmed, complicating rollback and audit integrity.
 
@@ -97,9 +129,9 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rejected:** Option B, re-running seed inserts for the case_id — rejected because it is more fragile after edits, can create idempotency problems, and risks accidentally changing audit evidence instead of only restoring the case baseline.
 
 ### D15 — message_custom flag: string comparison at confirm time
-**Date:** July 2026 (Day 2, Q8 resolution)
-**Decision:** Compare final confirmed message text against the locked template string for the target status at modal confirm time. Exact match → `message_custom = false`. Any difference → `message_custom = true`.
-**Rationale:** Audit flag reflects the final message actually sent, not editor behavior. Semantically accurate and straightforward to implement — one string comparison before firing `POST /transition`.
+**Date:** July 2026 (Day 2, Q8 resolution) · **Updated:** Day 3 integration sync
+**Decision:** Compare final confirmed message text against the locked template string for the target status at modal confirm time. Exact match → `message_custom = false`. Any difference → `message_custom = true`. Frontend sends this value in the request body, but **backend is the source of truth** — backend recomputes `message_custom` independently and its value is what lands in the audit row.
+**Rationale:** Audit flag reflects the final message actually sent, not editor behavior. Backend ownership prevents frontend bugs from corrupting the audit record.
 **Rejected:** Tracking whether the textarea was ever touched (message_custom = true on any edit regardless of final value) — rejected because it misrepresents what was actually sent to the patient.
 
 ---
@@ -114,6 +146,5 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Resolution:** *(fill in)*
 
 ---
-
 
 *DECISIONS.md · v2.0 · July 2026 · Update when open items resolve — do not close silently*
