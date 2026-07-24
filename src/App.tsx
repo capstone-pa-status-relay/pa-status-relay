@@ -629,6 +629,14 @@ function StatusDrawer({
   const [nextStepNote,    setNextStepNote]    = useState("");
 
   useEffect(() => {
+    const first = getValidTransitions(currentStatus)[0] ?? "closed";
+    setSelectedTransition(first);
+    setMessageText(getPatientMessage(first));
+    setGateError(null);
+    setDocLink(""); setReasonCode(""); setAppointmentLink(""); setNextStepNote("");
+  }, [currentStatus]);
+
+  useEffect(() => {
     setMessageText(getPatientMessage(selectedTransition));
     setGateError(null);
     setDocLink(""); setReasonCode(""); setAppointmentLink(""); setNextStepNote("");
@@ -669,8 +677,7 @@ function StatusDrawer({
             >
               Current status
             </span>
-            {/* TODO: hardcoded status — should derive from selectedCase.status */}
-            <StatusBadge status="submitted" />
+            <StatusBadge key={currentStatus} status={currentStatus} className="pa-chip-animate" />
           </div>
         </div>
         <button
@@ -718,7 +725,7 @@ function StatusDrawer({
               <span style={{ fontSize: "12px", fontWeight: 500, color: "#64748B", lineHeight: 1.4 }}>
                 Drug
               </span>
-              <span style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43 }}>
+              <span style={{ fontSize: "13px", fontWeight: 400, color: "#64748B", lineHeight: 1.4, fontFamily: "Inter, sans-serif" }}>
                 {drug ?? "—"}
               </span>
             </div>
@@ -1372,7 +1379,7 @@ function AuditDrawer({ onClose, selectedCase }: {
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Drug</dt>
               <dd style={{ fontFamily: "JetBrains Mono, monospace", color: "#475569", fontWeight: 400, fontSize: "12px", lineHeight: "1.4" }}>
-                {"—"}
+                {selectedCase?.drug ?? "—"}
               </dd>
             </div>
             <div className="flex flex-col gap-0.5">
@@ -1712,6 +1719,12 @@ export default function App() {
     ]);
   }, [])
   // VISUAL QA - REMOVE BEFORE MERGE
+
+  useEffect(() => {
+    if (drawerOpen) return;
+    const t = setTimeout(() => setSelectedCaseId(null), 200);
+    return () => clearTimeout(t);
+  }, [drawerOpen]);
 
   useEffect(() => {
     if (!document.querySelector('link[data-pa-font]')) {
@@ -2098,15 +2111,14 @@ export default function App() {
 
             <tbody>
               {filtered.map((c, idx) => {
-                const isHover = c.id === "2";
-                const isEven = idx % 2 === 1;
-                const rowBg = isHover ? "#F1F5F9" : isEven ? "#F1F5F9" : "#FFFFFF";
+                const isSelected = c.id === selectedCaseId && drawerOpen;
+                const rowBg = idx % 2 === 0 ? "#FFFFFF" : "#F8FAFC";
 
                 return (
                   <tr
                     key={c.id}
                     style={{
-                      backgroundColor: rowBg,
+                      backgroundColor: isSelected ? "#EFF6FF" : rowBg,
                       borderBottom: "1px solid #E2E8F0",
                       minHeight: 48,
                       cursor: "pointer",
@@ -2114,10 +2126,10 @@ export default function App() {
                     className="transition-colors duration-75 group"
                     onClick={() => openDrawer(String(c.id))}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#F1F5F9";
+                      if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#F8FAFC";
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = rowBg;
+                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = isSelected ? "#EFF6FF" : rowBg;
                     }}
                   >
                     {/* Checkbox */}
