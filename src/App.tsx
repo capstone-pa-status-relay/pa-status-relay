@@ -364,6 +364,7 @@ function MessagePreviewModal({
   onLogWithoutSending,
   onClose,
   onRecordConsent,
+  isEdited,
 }: {
   consentActive: boolean;
   messageText: string;
@@ -372,6 +373,7 @@ function MessagePreviewModal({
   onLogWithoutSending: () => void;
   onClose: () => void;
   onRecordConsent?: () => void;
+  isEdited: boolean;
 }) {
   return (
     <ModalShell>
@@ -429,8 +431,9 @@ function MessagePreviewModal({
           rows={3}
           style={{
             width: "100%",
-            backgroundColor: DS.bgCardSubtle,
+            backgroundColor: "#F4F6F8",
             border: `1px solid ${DS.borderInput}`,
+            borderLeft: "3px solid #1B4F72",
             borderRadius: 6,
             padding: "8px 12px",
             fontSize: 14,
@@ -444,6 +447,10 @@ function MessagePreviewModal({
           }}
           aria-label="Patient message"
         />
+
+        {isEdited && (
+          <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>Edited</span>
+        )}
 
         {/* Audit note */}
         <p
@@ -493,7 +500,7 @@ function MessagePreviewModal({
               >
                 Consent required — record consent to enable message delivery.
               </p>
-              <SecondaryButton onClick={onRecordConsent}>Record consent</SecondaryButton>
+              <SecondaryButton disabled={!onRecordConsent} onClick={onRecordConsent}>Record consent</SecondaryButton>
             </div>
           </div>
         )}
@@ -508,7 +515,7 @@ function MessagePreviewModal({
           padding: "0 20px 20px",
         }}
       >
-        <SecondaryButton onClick={onLogWithoutSending}>Log without sending</SecondaryButton>
+        <SecondaryButton onClick={onLogWithoutSending}>Skip message</SecondaryButton>
         <PrimaryButton disabled={!consentActive} onClick={onConfirm}>Confirm and send</PrimaryButton>
       </div>
     </ModalShell>
@@ -2269,6 +2276,7 @@ export default function App() {
             }}
             onClose={() => setModalOpen(false)}
             onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
+            isEdited={modalMessageText !== getPatientMessage(pendingToStatus ?? "new_order")}
           />
         </div>
       )}
