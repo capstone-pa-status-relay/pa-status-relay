@@ -18,6 +18,7 @@ import {
 type CaseListItem = {
   id: string;
   patient_name: string;
+  drug: string | null;
   status: PaStatus;
   consent_flag: boolean;
   updated_at: string;
@@ -1640,11 +1641,11 @@ export default function App() {
   // VISUAL QA - REMOVE BEFORE MERGE — replaces Supabase fetchCases with hardcoded mock data
   useEffect(() => {
     setCases([
-      { id: "case-001", patient_name: "Maria Santos",  status: "pending_review",      consent_flag: true,  updated_at: "2026-07-24T14:00:00Z" },
-      { id: "case-002", patient_name: "James Okafor",  status: "needs_documentation", consent_flag: false, updated_at: "2026-07-24T13:00:00Z" },
-      { id: "case-003", patient_name: "Linda Chen",    status: "approved",            consent_flag: true,  updated_at: "2026-07-24T12:00:00Z" },
-      { id: "case-004", patient_name: "Robert Diaz",   status: "denied",              consent_flag: true,  updated_at: "2026-07-24T11:00:00Z" },
-      { id: "case-005", patient_name: "Sarah Patel",   status: "info_request",        consent_flag: false, updated_at: "2026-07-24T10:00:00Z" },
+      { id: "case-001", patient_name: "Maria Santos",  drug: "Pembrolizumab",  status: "pending_review",      consent_flag: true,  updated_at: "2026-07-24T14:00:00Z" },
+      { id: "case-002", patient_name: "James Okafor",  drug: "Nivolumab",      status: "needs_documentation", consent_flag: false, updated_at: "2026-07-24T13:00:00Z" },
+      { id: "case-003", patient_name: "Linda Chen",    drug: "Bevacizumab",    status: "approved",            consent_flag: true,  updated_at: "2026-07-24T12:00:00Z" },
+      { id: "case-004", patient_name: "Robert Diaz",   drug: "Rituximab",      status: "denied",              consent_flag: true,  updated_at: "2026-07-24T11:00:00Z" },
+      { id: "case-005", patient_name: "Sarah Patel",   drug: "Atezolizumab",   status: "info_request",        consent_flag: false, updated_at: "2026-07-24T10:00:00Z" },
     ]);
   }, [])
   // VISUAL QA - REMOVE BEFORE MERGE
@@ -2102,7 +2103,7 @@ export default function App() {
                             color: "#475569",
                           }}
                         >
-                          {"—"}
+                          {c.drug ?? "—"}
                         </span>
                       </div>
                     </td>
