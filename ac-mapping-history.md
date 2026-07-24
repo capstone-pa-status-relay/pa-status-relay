@@ -156,3 +156,13 @@ All PRD-derived files have since been rebuilt against the complete document. `QA
 - Drift count: 0
 - Invalid evidence count: 0
 - Code @covers declarations found: 0
+
+## 2026-07-24 (EOD)
+- Branch: chore/day-2-evening-acmappng-regression-test
+- Combined run completed: PR #18/#19/#20 review written to PR_18_19_20_REVIEW.md (PR #20 suppressed-message fix verified correct against spec).
+- Eval Card Phase 3 attempted: Supabase env vars were not configured locally; configured .env from team values, first live connection to the Supabase project established.
+- Key finding: live cases table is EMPTY — seed.sql never executed against the live project; frontend has only ever rendered hardcoded local data.
+- Adversarial check: /api transition routes returned 404 at time of run (pre-PR #21).
+- PR #21 merged to main later today: /api route scaffold mounted, routes now return 501 backend_repository_not_configured; D16 locked (Vercel serverless as canonical API strategy).
+- PR #21 scaffold review completed: 4 findings (2 High — no auth enforcement, actor_id client-spoofable; 1 Medium — malformed JSON → 500; 1 Low — id coerces to empty string), reported to team.
+- Remaining dependency: Supabase BackendRepository implementation + seed execution (Lebert's lane).
