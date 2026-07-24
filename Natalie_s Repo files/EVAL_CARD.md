@@ -42,3 +42,11 @@ Confirm P2P → Approved/Denied blocked at API level, not just UI; then Clone.
 | Reviewers rating demo "useful/feasible" | ≥80% | — |
 
 Any scenario that fails should be logged as a known issue with an owner and fix plan before Day 5, not silently re-attempted until it passes.
+
+## Run Results
+
+| Date | Branch | Case | Result | Evidence |
+|---|---|---|---|---|
+| 2026-07-24 | chore/day-2-evening-acmappng-regression-test | Case 1 - Golden (valid transition via real UI) | FAIL (not executable end-to-end) | Live UI had no case rows due missing Supabase env and fetch skipped ([src/lib/supabase.ts](src/lib/supabase.ts#L3), [src/lib/supabase.ts](src/lib/supabase.ts#L6), [src/App.tsx](src/App.tsx#L1637)); Create Case did not persist and only logged ([src/App.tsx](src/App.tsx#L1740), [src/App.tsx](src/App.tsx#L1741)); transition route depends on `/api` call path ([src/App.tsx](src/App.tsx#L1709)). |
+| 2026-07-24 | chore/day-2-evening-acmappng-regression-test | Case 2 - Edge (consent=false warning + send blocked) | FAIL (blocked by missing live consent-false case) | No seeded/live case list available in UI because fetch skipped ([src/App.tsx](src/App.tsx#L1637)); modal consent state derives from selected case and defaults true when none selected ([src/App.tsx](src/App.tsx#L2250)); could not execute consent-false path on live case. |
+| 2026-07-24 | chore/day-2-evening-acmappng-regression-test | Case 3 - Adversarial (invalid transition via direct call) | FAIL (expected contract 400 invalid_transition, observed HTTP 404) | Direct POST to `http://127.0.0.1:5173/api/cases/invalid-case-id/transition` returned 404 (captured terminal output); dev server config has no API proxy/routes ([vite.config.ts](vite.config.ts#L5)); UI still issues `/api` fetches ([src/App.tsx](src/App.tsx#L1709)). |
