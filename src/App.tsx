@@ -15,6 +15,10 @@ import {
 // VISUAL QA - REMOVE BEFORE MERGE (restore supabase import when removing mock data)
 // import { supabase } from "./lib/supabase";
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 type CaseListItem = {
   id: string;
   patient_name: string;
@@ -2124,7 +2128,7 @@ export default function App() {
                           color: "#64748B",
                         }}
                       >
-                        {c.updated_at}
+                        {formatDate(c.updated_at)}
                       </span>
                     </td>
 
