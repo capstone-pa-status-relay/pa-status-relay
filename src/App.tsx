@@ -13,8 +13,7 @@ import {
   getPatientMessage,
   type PaStatus,
 } from "./backend/statusMachine";
-// VISUAL QA - REMOVE BEFORE MERGE (restore supabase import when removing mock data)
-// import { supabase } from "./lib/supabase";
+import { supabase } from "./lib/supabase";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -1130,49 +1129,55 @@ interface TimelineNode {
   metadata?: MetadataCardProps;
 }
 
-// VISUAL QA - REMOVE BEFORE MERGE
 const TIMELINE_NODES: TimelineNode[] = [
   {
     id: "n1",
-    timestamp: "Jul 24, 2026 · 2:00 PM",
+    timestamp: "Jul 20, 2026 · 9:14 AM",
     actor: "Demo Coordinator",
     type: "transition",
     from: "submitted",
-    to: "pending_review",
+    to: "approved",
     metadata: {
+      reasonCode: "",
       messageSent: true,
       messageCustom: false,
-      messageText: "Your insurance is reviewing your request. We'll contact you when there's a decision.",
+      messageText: "Your treatment is approved. Scheduling will contact you next.",
     },
   },
   {
     id: "n2",
-    timestamp: "Jul 24, 2026 · 1:42 PM",
+    timestamp: "Jul 20, 2026 · 8:55 AM",
     actor: "Demo Coordinator",
     type: "transition",
-    from: "new_order",
+    from: "pending_review",
     to: "submitted",
     metadata: {
-      docLink: "intake-docs.example.com/santos-case-001",
-      messageSent: false,
+      docLink: "intake-docs.example.com/okafor-1041",
+      messageSent: true,
       messageCustom: false,
     },
   },
   {
     id: "n3",
-    timestamp: "Jul 24, 2026 · 1:15 PM",
+    timestamp: "Jul 19, 2026 · 3:40 PM",
     actor: "Demo Coordinator",
     type: "transition",
     from: "pending_review",
     to: "pending_review",
     metadata: {
-      messageSent: false,
-      messageCustom: true,
-      messageText: "We are still waiting on your insurance to respond — we'll keep you posted.",
+      reasonCode: "clinical_notes_complete",
+      messageSent: true,
+      messageCustom: false,
     },
   },
+  {
+    id: "n4",
+    timestamp: "Jul 19, 2026 · 3:38 PM",
+    actor: "Demo Coordinator",
+    type: "demo",
+    demoLabel: "Case reset to baseline",
+  },
 ];
-// VISUAL QA - REMOVE BEFORE MERGE
 
 function NeedsDocsBadge() {
   return (
@@ -1708,17 +1713,27 @@ export default function App() {
   const [transitionError, setTransitionError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // VISUAL QA - REMOVE BEFORE MERGE — replaces Supabase fetchCases with hardcoded mock data
+  async function fetchCases() {
+    if (!supabase) {
+      console.warn("Supabase env vars are not configured; skipping case fetch.");
+      return;
+    }
+    const { data, error } = await supabase
+      .from('cases')
+      .select('id, patient_name, drug, current_status, consent_flag, updated_at')
+      .order('updated_at', { ascending: false });
+    if (error) {
+      console.error('fetch cases error:', error.message);
+      return;
+    }
+    if (data) setCases(data.map(({ id, patient_name, drug, current_status, consent_flag, updated_at }) => ({
+      id, patient_name, drug: drug ?? null, status: current_status as PaStatus, consent_flag, updated_at,
+    })));
+  }
+
   useEffect(() => {
-    setCases([
-      { id: "case-001", patient_name: "Maria Santos",  drug: "Pembrolizumab",  status: "pending_review",      consent_flag: true,  updated_at: "2026-07-24T14:00:00Z" },
-      { id: "case-002", patient_name: "James Okafor",  drug: "Nivolumab",      status: "needs_documentation", consent_flag: false, updated_at: "2026-07-24T13:00:00Z" },
-      { id: "case-003", patient_name: "Linda Chen",    drug: "Bevacizumab",    status: "approved",            consent_flag: true,  updated_at: "2026-07-24T12:00:00Z" },
-      { id: "case-004", patient_name: "Robert Diaz",   drug: "Rituximab",      status: "denied",              consent_flag: true,  updated_at: "2026-07-24T11:00:00Z" },
-      { id: "case-005", patient_name: "Sarah Patel",   drug: "Atezolizumab",   status: "info_request",        consent_flag: false, updated_at: "2026-07-24T10:00:00Z" },
-    ]);
-  }, [])
-  // VISUAL QA - REMOVE BEFORE MERGE
+    fetchCases();
+  }, []);
 
   useEffect(() => {
     if (drawerOpen) return;
