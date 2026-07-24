@@ -182,6 +182,7 @@ test("persists a valid transition with case update and audit insert drafts", asy
   });
   assert.deepEqual(repository.transitionAuditInserts[0], {
     case_id: "case_001",
+    action: "status_transition",
     from_status: "new_order",
     to_status: "submitted",
     actor_id: "actor_001",
@@ -309,11 +310,12 @@ function buildAuditEntry(insert: TransitionAuditInsertDraft): AuditEntry {
     timestamp: insert.timestamp,
     actor_id: insert.actor_id,
     actor_label: insert.actor_label,
-    action: "status_transition",
+    action: insert.action,
     from_status: insert.from_status,
     to_status: insert.to_status,
     reason_code: insert.reason_code,
     message_sent: insert.message_sent,
+    message_text: insert.message_text,
     message_custom: insert.message_custom,
   };
 }

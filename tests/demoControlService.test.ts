@@ -44,6 +44,7 @@ const auditEntries: AuditEntry[] = [
     to_status: "approved",
     reason_code: null,
     message_sent: true,
+    message_text: "Your treatment is approved. Scheduling will contact you next.",
     message_custom: false,
   },
 ];
