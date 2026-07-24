@@ -6,11 +6,13 @@ import type {
   DemoEvent,
   DemoEventId,
   IsoTimestamp,
+  ReopenCaseResponse,
   ResetCaseResponse,
 } from "./apiTypes.ts";
 import type { CaseInsertDraft } from "./caseService.ts";
 import {
   prepareCloneDemoEvent,
+  prepareReopenDemoEvent,
   prepareResetDemoEvent,
   type DemoEventInsertDraft,
 } from "./demoEventService.ts";
@@ -42,6 +44,11 @@ export type PreparedCloneCase = {
   case_insert: CaseInsertDraft;
   source_demo_event_insert: DemoEventInsertDraft;
   response: CloneCaseResponse;
+};
+
+export type PreparedReopenCase = {
+  demo_event_insert: DemoEventInsertDraft;
+  response: ReopenCaseResponse;
 };
 
 export function prepareResetCaseFromSnapshot(
@@ -109,6 +116,27 @@ export function prepareCloneCase(
         updated_at: timestamp,
       },
       source_demo_event: buildDemoEventResponse(generatedDemoEventId, sourceDemoEventInsert),
+    },
+  };
+}
+
+export function prepareReopenCase(
+  currentCase: Pick<CaseDetail, "id" | "status" | "updated_at">,
+  actorId: ActorId,
+  timestamp: IsoTimestamp,
+  generatedDemoEventId: DemoEventId,
+): PreparedReopenCase {
+  const demoEventInsert = prepareReopenDemoEvent(currentCase.id, actorId, timestamp);
+
+  return {
+    demo_event_insert: demoEventInsert,
+    response: {
+      case: {
+        id: currentCase.id,
+        status: currentCase.status,
+        updated_at: currentCase.updated_at,
+      },
+      demo_event: buildDemoEventResponse(generatedDemoEventId, demoEventInsert),
     },
   };
 }

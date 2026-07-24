@@ -134,6 +134,12 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rationale:** Audit flag reflects the final message actually sent, not editor behavior. Backend ownership prevents frontend bugs from corrupting the audit record.
 **Rejected:** Tracking whether the textarea was ever touched (message_custom = true on any edit regardless of final value) — rejected because it misrepresents what was actually sent to the patient.
 
+### D16 - API runtime strategy: Vercel serverless routes
+**Date:** July 2026 (Day 4 integration sync)
+**Decision:** The shared implementation uses Vercel serverless `/api` routes as the HTTP mount layer. Route files are thin glue: parse the request, create a backend request context, call `src/backend/apiHandlers.ts`, and serialize the response. Persistence stays behind `BackendRepository` and must be implemented against Supabase/Postgres/Auth/RLS.
+**Rationale:** Current `main` is React/Vite/TypeScript and hosting is locked to Vercel. Vercel `/api` routes match the paths already used by `App.tsx` and keep backend behavior in the existing TypeScript service/handler contracts.
+**Rejected:** Express + SQLite + vanilla JS as the shared implementation stack - useful as a reference prototype only, but not directly mergeable into the canonical repo stack. Direct frontend calls to backend service helpers - bypasses API contracts and persistence boundaries.
+
 ---
 
 ## Open Items (resolve and move to Locked Decisions above)

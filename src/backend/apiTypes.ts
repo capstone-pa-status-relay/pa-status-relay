@@ -147,3 +147,8 @@ export type CloneCaseResponse = {
   };
   source_demo_event: DemoEvent;
 };
+
+export type ReopenCaseResponse = {
+  case: Pick<CaseSummary, "id" | "status" | "updated_at">;
+  demo_event: DemoEvent;
+};

@@ -6,6 +6,7 @@ export type ApiErrorCode =
   | "case_not_found"
   | "missing_consent_flag"
   | "missing_patient_name"
+  | "missing_reset_confirmation"
   | "unauthorized";
 
 export type ApiErrorBody = {
@@ -28,6 +29,7 @@ export const API_ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   case_not_found: "Case not found.",
   missing_consent_flag: "Consent flag is required.",
   missing_patient_name: "Patient name is required.",
+  missing_reset_confirmation: "Reset confirmation is required.",
   unauthorized: "You are not authorized to perform this action.",
 };
 
@@ -41,6 +43,7 @@ export const DEFAULT_ERROR_STATUS: Record<ApiErrorCode, ApiErrorResponse["status
   case_not_found: 404,
   missing_consent_flag: 400,
   missing_patient_name: 400,
+  missing_reset_confirmation: 400,
   unauthorized: 401,
 };
 
