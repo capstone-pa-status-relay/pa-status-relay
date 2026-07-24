@@ -28,6 +28,7 @@ const priorAuditEntries: AuditEntry[] = [
     to_status: "pending_review",
     reason_code: "no_consent",
     message_sent: false,
+    message_text: null,
     message_custom: false,
   },
 ];

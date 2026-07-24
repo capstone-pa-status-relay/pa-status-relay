@@ -15,6 +15,7 @@ const baseAuditEntry: AuditEntry = {
   to_status: "submitted",
   reason_code: null,
   message_sent: true,
+  message_text: "Your PA request has been submitted and is under insurance review.",
   message_custom: false,
 };
 

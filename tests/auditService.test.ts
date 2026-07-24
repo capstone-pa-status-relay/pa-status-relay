@@ -16,6 +16,7 @@ const auditEntries: AuditEntry[] = [
     to_status: "submitted",
     reason_code: null,
     message_sent: true,
+    message_text: "Your PA request has been submitted and is under insurance review.",
     message_custom: false,
   },
   {
@@ -29,6 +30,7 @@ const auditEntries: AuditEntry[] = [
     to_status: "pending_review",
     reason_code: "no_consent",
     message_sent: false,
+    message_text: null,
     message_custom: false,
   },
   {
@@ -42,6 +44,7 @@ const auditEntries: AuditEntry[] = [
     to_status: "approved",
     reason_code: null,
     message_sent: true,
+    message_text: "Custom patient message",
     message_custom: true,
   },
   {
@@ -55,6 +58,7 @@ const auditEntries: AuditEntry[] = [
     to_status: "needs_documentation",
     reason_code: null,
     message_sent: true,
+    message_text: "Documentation is needed before your request can be submitted.",
     message_custom: false,
   },
 ];

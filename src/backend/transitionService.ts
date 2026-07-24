@@ -1,6 +1,7 @@
 import { apiError, type ApiErrorResponse } from "./apiErrors.ts";
 import type {
   ActorId,
+  AuditActionType,
   AuditEntry,
   CaseDetail,
   CaseId,
@@ -27,6 +28,7 @@ export type TransitionCaseUpdateDraft = {
 
 export type TransitionAuditInsertDraft = {
   case_id: CaseId;
+  action: AuditActionType;
   from_status: PaStatus;
   to_status: PaStatus;
   actor_id: ActorId;
@@ -73,6 +75,8 @@ export function prepareTransition(
   }
 
   const effectiveMessage = getEffectiveMessageFields(currentCase, request);
+  const auditAction: AuditActionType = currentCase.consent_flag ? "status_transition" : "message_suppressed";
+  const auditReasonCode = currentCase.consent_flag ? metadata.reason_code ?? null : "no_consent";
   const caseUpdate: TransitionCaseUpdateDraft = {
     id: currentCase.id,
     status: request.to_status,
@@ -84,12 +88,13 @@ export function prepareTransition(
 
   const auditInsert: TransitionAuditInsertDraft = {
     case_id: currentCase.id,
+    action: auditAction,
     from_status: currentCase.status,
     to_status: request.to_status,
     actor_id: actor.actor_id,
     actor_label: actor.actor_label,
     timestamp,
-    reason_code: metadata.reason_code ?? null,
+    reason_code: auditReasonCode,
     doc_link: metadata.doc_link ?? null,
     message_sent: effectiveMessage.message_sent,
     message_text: effectiveMessage.message_text,
@@ -102,10 +107,10 @@ export function prepareTransition(
     timestamp: auditInsert.timestamp,
     actor_id: auditInsert.actor_id,
     actor_label: auditInsert.actor_label,
-    action: !currentCase.consent_flag ? "message_suppressed" : "status_transition",
+    action: auditInsert.action,
     from_status: auditInsert.from_status,
     to_status: auditInsert.to_status,
-    reason_code: !currentCase.consent_flag ? "no_consent" : auditInsert.reason_code,
+    reason_code: auditInsert.reason_code,
     message_sent: auditInsert.message_sent,
     message_text: auditInsert.message_text,
     message_custom: auditInsert.message_custom,
