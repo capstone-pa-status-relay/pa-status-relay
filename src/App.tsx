@@ -1696,6 +1696,7 @@ export default function App() {
   const [isCreatingCase, setIsCreatingCase] = useState(false);
   const [cases, setCases] = useState<CaseListItem[]>([]);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   async function fetchCases() {
     if (!supabase) {
@@ -1720,6 +1721,13 @@ export default function App() {
   useEffect(() => {
     fetchCases()
   }, [])
+
+  useEffect(() => {
+    if (successToast) {
+      const t = setTimeout(() => setSuccessToast(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [successToast])
 
   useEffect(() => {
     if (!document.querySelector('link[data-pa-font]')) {
@@ -1790,6 +1798,7 @@ export default function App() {
       }
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
+      setSuccessToast(`Status updated to ${BADGE_CONFIG[data.case.status as PAStatus]?.label ?? data.case.status}.`);
       // TODO: refetch audit trail when audit API is wired
       return true;
     } catch (err) {
@@ -2367,6 +2376,41 @@ export default function App() {
             onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
             isEdited={modalMessageText !== getPatientMessage(pendingToStatus ?? "new_order")}
           />
+        </div>
+      )}
+
+      {successToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 50,
+            backgroundColor: "#F0FDF4",
+            borderLeft: "3px solid #86EFAC",
+            borderRadius: 6,
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+            fontFamily: "Inter, sans-serif",
+            minWidth: 240,
+            maxWidth: 360,
+          }}
+        >
+          <CheckCircle2 size={16} aria-hidden="true" style={{ color: "#15803D", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: "#15803D", lineHeight: 1.4, flex: 1 }}>{successToast}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            aria-label="Dismiss"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#15803D", padding: 2, display: "flex", alignItems: "center", flexShrink: 0 }}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
     </div>
