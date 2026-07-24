@@ -976,7 +976,7 @@ function StatusDrawer({
 
 // ── Audit Trail ──────────────────────────────────────────────────────────────
 
-function FilterDropdown({ label }: { label: string }) {
+function FilterDropdown({ label, onChange: _onChange }: { label: string; onChange?: (value: string | null) => void }) {
   return (
     <button
       type="button"
@@ -1250,6 +1250,13 @@ function AuditDrawer({ onClose, selectedCase }: {
     return id.length > 20 ? id.slice(0, 20) + "…" : id;
   })();
 
+  const filteredNodes = TIMELINE_NODES.filter((node) => {
+    if (filterActionType === "Status change" && node.type !== "transition") return false;
+    if (filterActor !== null && node.actor !== filterActor) return false;
+    // TODO: filter by filterDateRange when date-range picker is wired
+    return true;
+  });
+
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
@@ -1352,9 +1359,9 @@ function AuditDrawer({ onClose, selectedCase }: {
         {/* Filter bar */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <FilterDropdown label="Action type" />
-            <FilterDropdown label="Actor" />
-            <FilterDropdown label="Date range" />
+            <FilterDropdown label="Action type" onChange={setFilterActionType} />
+            <FilterDropdown label="Actor" onChange={setFilterActor} />
+            <FilterDropdown label="Date range" onChange={setFilterDateRange} />
           </div>
           {activeParts.length > 0 && (
             <div className="flex items-center justify-between">
@@ -1376,8 +1383,8 @@ function AuditDrawer({ onClose, selectedCase }: {
 
         {/* Timeline */}
         <div className="flex flex-col">
-          {TIMELINE_NODES.map((node, i) => (
-            <TimelineNodeRow key={node.id} node={node} isLast={i === TIMELINE_NODES.length - 1} />
+          {filteredNodes.map((node, i) => (
+            <TimelineNodeRow key={node.id} node={node} isLast={i === filteredNodes.length - 1} />
           ))}
         </div>
 
