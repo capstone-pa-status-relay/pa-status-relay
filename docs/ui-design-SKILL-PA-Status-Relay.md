@@ -32,7 +32,7 @@ If these files conflict: DESIGN_SYSTEM.md wins for implementation; this file win
 
 **Primary palette:**
 - Deep Navy (#0A1628) — primary text, strong headings, high-trust surfaces
-- Sapphire (#1D4ED8) — interactive elements, links, primary CTA
+- Sapphire / Brand Primary (#2563EB) — interactive elements, links, primary CTA (see DESIGN_SYSTEM.md Section 3)
 - Slate (#64748B) — secondary text, metadata, placeholder states
 - Off-White (#F8FAFC) — page background, low-stimulus resting state
 
@@ -49,33 +49,37 @@ If these files conflict: DESIGN_SYSTEM.md wins for implementation; this file win
 
 ## 3. Typography
 
-**Font stack:** IBM Plex Sans (base) + IBM Plex Mono (timestamps, codes, IDs)
+**Font stack:** Inter (base) + JetBrains Mono (timestamps, codes, IDs)
 
-**Why IBM Plex:** Designed for clarity in dense data environments. Mono variant is ideal for audit log timestamps and case IDs — it's a typeface the coordinator will see on technical documentation, not just consumer apps. Signals precision.
+**Why Inter:** Chosen over IBM Plex Sans and DM Sans in a three-option design session comparison. Inter has tighter letter-spacing and crisper rendering at 11–13px — where case list rows, audit metadata, and status badges live all day. At those sizes, the difference is immediately visible in scan speed. Loaded via Google Fonts.
+
+**Why JetBrains Mono:** High contrast against Inter body text. Ideal for audit trail timestamps and case IDs. Signals precision without leaning into developer-tool aesthetics. Loaded via Google Fonts.
 
 **Type scale (key sizes):**
 - Page title / section headers: 18–20px, weight 600
 - Table headers: 12px, weight 600, uppercase tracking (0.05em)
 - Body / cell text: 14px, weight 400
 - Metadata / secondary labels: 12px, weight 400, Slate color
-- Timestamps in audit trail: IBM Plex Mono, 12px
+- Timestamps in audit trail: JetBrains Mono, 12px
+
+**Implementation:** Use `fontFamily: "Inter, sans-serif"` for body text. Use `fontFamily: "JetBrains Mono, monospace"` for timestamps and codes. The correct token name in DESIGN_SYSTEM.md is `--font-sans` but direct string values are used throughout the codebase.
 
 **What to avoid:**
 - Heading sizes above 24px (this is not a marketing page)
 - Any decorative or display typeface
-- Sans-serif for timestamps (Mono is mandatory for audit trail)
+- Sans-serif for timestamps (JetBrains Mono is mandatory for audit trail)
 
 ---
 
 ## 4. Layout and Spacing
 
-**Core layout:** Single-column content area, centered, max-width 1200px. Sidebar is not in MVP scope.
+**Core layout:** Fixed 220px left sidebar with a full-height right main content area in a flex row. Root div and aside use explicit inline styles (belt-and-suspenders alongside Tailwind) to guarantee correct layout regardless of Tailwind load order.
 
 **Spacing rationale:** Use the 8-point grid from DESIGN_SYSTEM.md. Every component internal padding and external margin should land on a multiple of 8 (or 4 for micro-spacing). This is not visible to the coordinator but makes the layout feel composed rather than arbitrary.
 
 **Density:** Medium density. The coordinator needs to see 5–10 cases in the list without scrolling. Don't pad rows so generously that it feels like a mobile app. Don't compress so tightly that it feels like a spreadsheet.
 
-**Drawer pattern:** Right-side slide-over at 440px width. Never full-screen — the coordinator needs to see the case list behind the drawer to maintain context. Overlay dims the list (opacity 0.4) but does not remove it.
+**Drawer pattern:** Right-side slide-over at **600px width**. Never full-screen — the coordinator needs to see the case list behind the drawer to maintain context. Overlay dims the list (opacity 0.4) but does not remove it.
 
 **Modal pattern:** Centered overlay. Max-width 480px. Always escape-key dismissable. Never use a modal for information that could live inline. Modal is reserved for: message preview/confirm, destructive action confirmation.
 
@@ -89,7 +93,7 @@ Status badges are the primary scan target in the case list. The coordinator read
 1. Every status must be immediately distinguishable at a glance — don't rely on color alone, use label
 2. The label is the primary signal — never abbreviate
 3. Icon is optional reinforcement, not the primary signal
-4. Badge shapes are rounded (4px radius), not pills — pills are too consumer-facing
+4. Badge shapes are **pills** (fully rounded) — consistent with the DESIGN_SYSTEM.md token system
 
 **Color semantics:**
 - Blue family (Sapphire tones) — active workflow states (Submitted, Pending Review, Info Request)
@@ -113,7 +117,7 @@ Status badges are the primary scan target in the case list. The coordinator read
 **Disabled state is important:** Invalid transition buttons are disabled, not hidden. The coordinator needs to see what's available and understand why something is unavailable. A disabled button with a tooltip is better than a missing button that leaves the coordinator confused.
 
 **Button hierarchy:**
-- Primary (Sapphire fill, white text): one per surface maximum. Used for the primary action (Confirm send, Submit transition)
+- Primary (Sapphire #2563EB fill, white text): one per surface maximum. Used for the primary action (Confirm send, Submit transition)
 - Secondary (border, Sapphire text): cancel, secondary actions
 - Ghost/text: ancillary controls that don't need visual weight (CSV export, "Demo only" controls)
 
@@ -130,7 +134,7 @@ Status badges are the primary scan target in the case list. The coordinator read
 The audit trail panel is the most trust-sensitive surface in the product. Design it like a compliance document.
 
 **Row design:**
-- Monospaced timestamp left-aligned (12px IBM Plex Mono, Slate color)
+- Monospaced timestamp left-aligned (12px JetBrains Mono, Slate color)
 - Actor label in Slate, weight 400
 - Action description in Navy, weight 500 — this is what the reviewer reads first
 - Status badges (size="sm") inline for from/to status fields
@@ -164,7 +168,7 @@ Demo controls (Reset, Clone, Re-open) must be visually distinct from real workfl
 
 ## 9. Empty States
 
-**No cases:** Centered, illustration optional (keep it minimal — a simple icon, not a drawn scene), short headline, one CTA. "No cases yet. Add your first case to get started." Primary button.
+**No cases:** Centered, illustration optional (keep it minimal — a simple icon, not a drawn scene), short headline, one CTA. Headline: "No cases yet." Body: "Create a case to start tracking authorizations." Primary button.
 
 **No search results:** "No cases match your search. Try a different name, drug, or case ID." No illustration needed — the coordinator understands search. No CTA needed — just clear the confusion.
 
@@ -177,13 +181,13 @@ Demo controls (Reset, Clone, Re-open) must be visually distinct from real workfl
 ## 10. Things That Aren't In Scope (but you'll be tempted to add)
 
 - Animations beyond the drawer slide-in and subtle hover transitions
-- A sidebar navigation (there is one view in MVP)
 - Notification badges or dot indicators on status chips
 - Inline editing of case metadata in the case list (editing happens in the drawer)
-- A search-as-you-type that hits the API on each keystroke (client-side filter only per D-decision)
+- A search-as-you-type that hits the API on each keystroke (client-side filter only per D03)
 - Responsive / mobile layout (Chrome desktop only, D08)
 - Dark mode
 - Any icon library beyond the single lucide-react import already in the codebase
+- Any additional CSS framework — styling uses **Tailwind CSS utility classes** per D10. No new hex values or component libraries beyond what is already in the codebase.
 
 ---
 
@@ -195,4 +199,4 @@ For implementation: DESIGN_SYSTEM.md is the code-facing authority. Figma is the 
 
 ---
 
-*ui-design-SKILL-PA-Status-Relay.md · v1.0 · July 2026*
+*ui-design-SKILL-PA-Status-Relay.md · v1.1 · July 2026 · Corrected to match locked DESIGN_SYSTEM.md (Inter + JetBrains Mono, Tailwind CSS, #2563EB brand primary, pill badges, 600px drawers)*

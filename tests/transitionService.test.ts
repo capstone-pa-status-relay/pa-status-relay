@@ -52,6 +52,7 @@ test("prepares case update, audit insert, and API response for a valid transitio
       },
       audit_insert: {
         case_id: "case_001",
+        action: "status_transition",
         from_status: "new_order",
         to_status: "submitted",
         actor_id: "actor_001",
@@ -80,6 +81,7 @@ test("prepares case update, audit insert, and API response for a valid transitio
           to_status: "submitted",
           reason_code: null,
           message_sent: true,
+          message_text: "Your PA request has been submitted and is under insurance review.",
           message_custom: false,
         },
       },
@@ -159,8 +161,13 @@ test("forces message fields to unsent when consent is false", () => {
   assert.equal(result.transition.audit_insert.message_sent, false);
   assert.equal(result.transition.audit_insert.message_text, null);
   assert.equal(result.transition.audit_insert.message_custom, false);
+  assert.equal(result.transition.audit_insert.action, "message_suppressed");
+  assert.equal(result.transition.audit_insert.reason_code, "no_consent");
   assert.equal(result.transition.response.audit_entry.message_sent, false);
+  assert.equal(result.transition.response.audit_entry.message_text, null);
   assert.equal(result.transition.response.audit_entry.message_custom, false);
+  assert.equal(result.transition.response.audit_entry.action, "message_suppressed");
+  assert.equal(result.transition.response.audit_entry.reason_code, "no_consent");
 });
 
 test("computes custom message true when final confirmed text differs from the template", () => {

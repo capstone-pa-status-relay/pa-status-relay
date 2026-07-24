@@ -39,6 +39,7 @@ export type AuditEntry = {
   to_status: PaStatus;
   reason_code: string | null;
   message_sent: boolean;
+  message_text: string | null;
   message_custom: boolean;
 };
 
