@@ -1744,6 +1744,7 @@ export default function App() {
   function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
     console.log("create case", { patientName, consentFlag });
     setShowCreateCase(false);
+    setSuccessToast("Case created successfully.");
   }
 
   async function handleConsentUpdate(id: string) {
