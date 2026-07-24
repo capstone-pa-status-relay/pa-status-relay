@@ -201,8 +201,9 @@ function TransitionDropdown({
               role="option"
               aria-selected={option === value}
               onClick={() => { onChange(option); setOpen(false); }}
-              className="flex items-center justify-between px-3 py-2 cursor-pointer"
+              className="flex items-center justify-between cursor-pointer"
               style={{
+                padding: "10px 16px",
                 backgroundColor: option === value ? "var(--pa-primary-subtle)" : "transparent",
               }}
               onMouseEnter={(e) => {
@@ -215,7 +216,17 @@ function TransitionDropdown({
               }}
             >
               <div className="flex items-center gap-2">
-                <StatusBadge status={option} />
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: option === value ? 500 : 400,
+                    color: "#1A1F2E",
+                    fontFamily: "Inter, sans-serif",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {BADGE_CONFIG[option as PAStatus].label}
+                </span>
                 {RETURN_PATHS.has(`${currentStatus}->${option}`) && (
                   <span
                     style={{
