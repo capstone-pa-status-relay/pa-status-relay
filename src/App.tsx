@@ -433,7 +433,7 @@ function MessagePreviewModal({
             width: "100%",
             backgroundColor: "#F4F6F8",
             border: `1px solid ${DS.borderInput}`,
-            borderLeft: "3px solid #1B4F72",
+            borderLeft: "3px solid #2563EB",
             borderRadius: 6,
             padding: "8px 12px",
             fontSize: 14,
