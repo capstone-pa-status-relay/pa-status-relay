@@ -1286,9 +1286,25 @@ function AuditDrawer({ onClose, selectedCase }: {
           </div>
           <button
             type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+            disabled={selectedCase === null}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
             aria-label="Export CSV"
+            onClick={async () => {
+              if (!selectedCase) return;
+              const res = await fetch(`/api/cases/${selectedCase.id}/audit/export`, { method: "GET" });
+              if (!res.ok) return;
+              const disposition = res.headers.get("Content-Disposition") ?? "";
+              const match = disposition.match(/filename="?([^";\n]+)"?/);
+              const filename = match?.[1] ?? `audit_${selectedCase.id}_${new Date().toISOString().slice(0, 10)}.csv`;
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = filename;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
           >
             <Download size={13} aria-hidden="true" />
             Export CSV
