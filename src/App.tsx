@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   PlusCircle, FileWarning, Send, Clock, AlertCircle,
   Stethoscope, CheckCircle2, XCircle, Lock,
@@ -153,17 +154,39 @@ function TransitionDropdown({
   currentStatus,
   value,
   onChange,
+  isDrawerOpen,
 }: {
   currentStatus: PaStatus;
   value: PaStatus;
   onChange: (v: PaStatus) => void;
+  isDrawerOpen: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [portalPos, setPortalPos] = useState({ top: 0, left: 0, width: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const options = getValidTransitions(currentStatus);
+
+  useEffect(() => {
+    if (!isDrawerOpen) setOpen(false);
+  }, [isDrawerOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) setPortalPos({ top: rect.bottom + window.scrollY + 4, left: rect.left, width: rect.width });
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
 
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((p) => !p)}
         className="w-full flex items-center justify-between px-3 py-2 rounded-md border text-left"
@@ -190,11 +213,16 @@ function TransitionDropdown({
         />
       </button>
 
-      {open && (
+      {open && createPortal(
         <ul
           role="listbox"
-          className="absolute left-0 right-0 mt-1 rounded-md border overflow-hidden z-10"
+          className="rounded-md border overflow-hidden"
           style={{
+            position: "fixed",
+            top: portalPos.top,
+            left: portalPos.left,
+            width: portalPos.width,
+            zIndex: 9999,
             backgroundColor: "#FFFFFF",
             borderColor: "#CBD5E1",
             boxShadow: "0 4px 6px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.06)",
@@ -255,7 +283,8 @@ function TransitionDropdown({
               )}
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   );
@@ -569,6 +598,11 @@ function StatusDrawer({
   currentStatus,
   transitionError,
   onClearError,
+  patientName,
+  caseNumber,
+  drug,
+  isDrawerOpen,
+  consentFlag,
 }: {
   onClose: () => void;
   onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
@@ -576,6 +610,11 @@ function StatusDrawer({
   currentStatus: PaStatus;
   transitionError: string | null;
   onClearError: () => void;
+  patientName: string;
+  caseNumber: string;
+  drug: string | null;
+  isDrawerOpen: boolean;
+  consentFlag: boolean;
 }) {
   const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
     () => getValidTransitions(currentStatus)[0] ?? "closed",
@@ -622,7 +661,7 @@ function StatusDrawer({
               margin: 0,
             }}
           >
-            Case #1042 — Linh Nguyen
+            Case #{caseNumber} — {patientName}
           </h2>
           <div className="flex items-center gap-2">
             <span
@@ -672,7 +711,7 @@ function StatusDrawer({
                 Patient
               </span>
               <span style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43 }}>
-                Linh Nguyen
+                {patientName}
               </span>
             </div>
             <div className="flex flex-col gap-1">
@@ -680,14 +719,14 @@ function StatusDrawer({
                 Drug
               </span>
               <span style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43 }}>
-                Nivolumab
+                {drug ?? "—"}
               </span>
             </div>
           </div>
         </div>
 
         {/* Transition selector */}
-        <div className="flex flex-col gap-1.5">
+        <div className="relative flex flex-col gap-1.5">
           <span
             style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43, display: "block" }}
           >
@@ -697,6 +736,7 @@ function StatusDrawer({
             currentStatus={currentStatus}
             value={selectedTransition}
             onChange={setSelectedTransition}
+            isDrawerOpen={isDrawerOpen}
           />
           {gateError && (
             <p
@@ -842,23 +882,30 @@ function StatusDrawer({
           >
             Consent
           </span>
-          <span
-            className="inline-flex items-center gap-1"
-            style={{
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "#15803D",
-              backgroundColor: "#F0FDF4",
-              border: "1px solid rgba(20,83,45,0.20)",
-              borderRadius: "9999px",
-              padding: "3px 9px",
-              lineHeight: 1.4,
-              fontFamily: "Inter, sans-serif",
-            }}
-          >
-            <CheckCircle2 size={12} aria-hidden="true" />
-            Active
-          </span>
+          {consentFlag ? (
+            <span
+              className="inline-flex items-center gap-1"
+              style={{
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "#15803D",
+                backgroundColor: "#F0FDF4",
+                border: "1px solid rgba(20,83,45,0.20)",
+                borderRadius: "9999px",
+                padding: "3px 9px",
+                lineHeight: 1.4,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              <CheckCircle2 size={12} aria-hidden="true" />
+              Consent on file
+            </span>
+          ) : (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#92400E", fontFamily: "Inter, sans-serif" }}>Consent required</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -1335,23 +1382,30 @@ function AuditDrawer({ onClose, selectedCase }: {
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Consent</dt>
               <dd>
-                <span
-                  className="inline-flex items-center rounded-full font-semibold"
-                  style={{
-                    backgroundColor: selectedCase?.consent_flag ? "#D5F5E3" : "#FFFBEB",
-                    color: selectedCase?.consent_flag ? "#1E8449" : "#92400E",
-                    border: selectedCase?.consent_flag ? "1px solid rgba(30,132,73,0.25)" : "1px solid #FCD34D",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    lineHeight: 1,
-                    paddingLeft: "9px",
-                    paddingRight: "9px",
-                    paddingTop: "3px",
-                    paddingBottom: "3px",
-                  }}
-                >
-                  {selectedCase?.consent_flag ? "Active" : "Suppressed"}
-                </span>
+                {selectedCase?.consent_flag ? (
+                  <span
+                    className="inline-flex items-center rounded-full font-semibold"
+                    style={{
+                      backgroundColor: "#D5F5E3",
+                      color: "#1E8449",
+                      border: "1px solid rgba(30,132,73,0.25)",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      lineHeight: 1,
+                      paddingLeft: "9px",
+                      paddingRight: "9px",
+                      paddingTop: "3px",
+                      paddingBottom: "3px",
+                    }}
+                  >
+                    Consent on file
+                  </span>
+                ) : (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#92400E", fontFamily: "Inter, sans-serif" }}>Consent required</span>
+                  </span>
+                )}
               </dd>
             </div>
           </dl>
@@ -1645,6 +1699,7 @@ export default function App() {
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [cases, setCases] = useState<CaseListItem[]>([]);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   // VISUAL QA - REMOVE BEFORE MERGE — replaces Supabase fetchCases with hardcoded mock data
   useEffect(() => {
@@ -2098,7 +2153,7 @@ export default function App() {
                             {c.patient_name}
                           </span>
                           {!c.consent_flag && (
-                            <span aria-label="Consent suppressed" title="Patient has not consented to status updates">
+                            <span aria-label="Consent required" title="Patient has not consented to status updates">
                               <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
                             </span>
                           )}
@@ -2181,6 +2236,11 @@ export default function App() {
             currentStatus={(selectedCase?.status as PaStatus) ?? "new_order"}
             transitionError={transitionError}
             onClearError={() => setTransitionError(null)}
+            patientName={selectedCase?.patient_name ?? ""}
+            caseNumber={selectedCase?.id?.replace("case-", "") ?? ""}
+            drug={selectedCase?.drug ?? null}
+            isDrawerOpen={drawerOpen}
+            consentFlag={selectedCase?.consent_flag ?? false}
           />
         </div>
 
@@ -2284,6 +2344,16 @@ export default function App() {
             onClose={() => setModalOpen(false)}
             onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
           />
+        </div>
+      )}
+
+      {successToast && (
+        <div role="status" aria-live="polite" style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, backgroundColor: "#F0FDF4", borderLeft: "3px solid #86EFAC", borderRadius: 6, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.10)", fontFamily: "Inter, sans-serif", minWidth: 240, maxWidth: 360 }}>
+          <CheckCircle2 size={16} aria-hidden="true" style={{ color: "#15803D", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: "#15803D", lineHeight: 1.4, flex: 1 }}>{successToast}</span>
+          <button type="button" onClick={() => setSuccessToast(null)} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", color: "#15803D", padding: 2, display: "flex", alignItems: "center", flexShrink: 0 }}>
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
     </div>
