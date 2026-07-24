@@ -29,6 +29,7 @@ If this file conflicts with `STATE_MACHINE.md`, `STATE_MACHINE.md` wins.
 - `actor_id` is the user identifier used for audit records. Do not use `user_id` in API contracts unless the schema decision changes.
 - Audit rows are append-only. No endpoint may update or delete `audit_trail` rows.
 - Demo controls write to `demo_events`, not `audit_trail`.
+- HTTP routes are mounted as Vercel serverless `/api` functions per D16. Route files are thin glue around `src/backend/apiHandlers.ts`; persistence is implemented behind `BackendRepository` against Supabase/Postgres/Auth/RLS.
 
 ## Status Values
 
@@ -426,6 +427,28 @@ Response `201`:
 }
 ```
 
+### `POST /api/cases/:id/reopen`
+
+Demo-only endpoint. Records that a closed/source case was re-opened for demo navigation purposes. This writes a `demo_events` row only and does not change `cases.current_status` or write to `audit_trail`.
+
+Response `200`:
+
+```json
+{
+  "case": {
+    "id": "case_001",
+    "status": "closed",
+    "updated_at": "2026-07-21T15:00:00Z"
+  },
+  "demo_event": {
+    "id": "event_001",
+    "case_id": "case_001",
+    "event_type": "reopen",
+    "created_at": "2026-07-21T15:00:00Z"
+  }
+}
+```
+
 ## Transition Gates
 
 | Transition | Required field | Error code |
@@ -445,10 +468,8 @@ Response `201`:
 
 Resolve or confirm these before implementation:
 
-- Q1 hosting platform
-- Q6 `actor_label` source
-- Whether consent false uses a separate audit row with `action = message_suppressed`, or a transition audit row with action/message fields that expose suppression
-- Final Supabase schema field names from Lebert before API code starts
+- Final Supabase `BackendRepository` implementation details and live RLS/auth verification.
+- Baseline snapshot storage location for Reset in the live Supabase project.
 
 ## Suggested First Tests
 

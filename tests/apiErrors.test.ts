@@ -67,4 +67,12 @@ test("defines case CRUD errors with the shared response shape", () => {
       message: "Consent flag is required.",
     },
   });
+
+  assert.deepEqual(apiError("missing_reset_confirmation"), {
+    status: 400,
+    body: {
+      error: "missing_reset_confirmation",
+      message: "Reset confirmation is required.",
+    },
+  });
 });

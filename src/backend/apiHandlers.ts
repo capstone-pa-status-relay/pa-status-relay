@@ -1,17 +1,25 @@
-import { type ApiErrorResponse } from "./apiErrors.ts";
+import { apiError, type ApiErrorResponse } from "./apiErrors.ts";
+import { buildAuditCsvExport, type AuditCsvExport } from "./auditCsv.ts";
+import { listAuditEntriesForCase } from "./auditService.ts";
 import type {
   CaseId,
+  CloneCaseResponse,
   CreateCaseRequest,
   CreateCaseResponse,
+  GetAuditQuery,
+  GetAuditResponse,
   GetCaseResponse,
   GetCasesQuery,
   GetCasesResponse,
+  ReopenCaseResponse,
+  ResetCaseRequest,
+  ResetCaseResponse,
   TransitionCaseRequest,
   TransitionCaseResponse,
   UpdateCaseConsentRequest,
   UpdateCaseConsentResponse,
 } from "./apiTypes.ts";
-import type { BackendRequestContext } from "./apiRepository.ts";
+import type { BackendRequestContext, CaseInsertWithId } from "./apiRepository.ts";
 import {
   getCase,
   listCases,
@@ -23,6 +31,11 @@ import {
   prepareConsentUpdate,
   type ConsentUpdateInput,
 } from "./consentService.ts";
+import {
+  prepareCloneCase,
+  prepareReopenCase,
+  prepareResetCaseFromSnapshot,
+} from "./demoControlService.ts";
 import { prepareTransition } from "./transitionService.ts";
 
 export type ApiSuccessResponse<TBody> = {
@@ -146,7 +159,151 @@ export async function handleTransitionCase(
   };
 }
 
+export async function handleGetAudit(
+  context: BackendRequestContext,
+  caseId: CaseId,
+  query: GetAuditQuery = {},
+): Promise<ApiHandlerResponse<GetAuditResponse>> {
+  const caseResult = getCase(await context.repository.getCaseRowById(caseId));
+
+  if (!caseResult.ok) {
+    return caseResult.error;
+  }
+
+  const auditEntries = await context.repository.listAuditEntriesForCase(caseId);
+
+  return {
+    status: 200,
+    body: listAuditEntriesForCase(auditEntries, caseId, query),
+  };
+}
+
+export async function handleExportAudit(
+  context: BackendRequestContext,
+  caseId: CaseId,
+  query: GetAuditQuery = {},
+): Promise<ApiHandlerResponse<AuditCsvExport>> {
+  const auditResult = await handleGetAudit(context, caseId, query);
+
+  if (auditResult.status !== 200) {
+    return auditResult as ApiErrorResponse;
+  }
+
+  return {
+    status: 200,
+    body: buildAuditCsvExport(caseId, auditResult.body.audit, context.now()),
+  };
+}
+
+export async function handleResetCase(
+  context: BackendRequestContext,
+  caseId: CaseId,
+  request: Partial<ResetCaseRequest>,
+): Promise<ApiHandlerResponse<ResetCaseResponse>> {
+  const caseResult = getCase(await context.repository.getCaseRowById(caseId));
+
+  if (!caseResult.ok) {
+    return caseResult.error;
+  }
+
+  if (request.confirm !== true) {
+    return apiError("missing_reset_confirmation");
+  }
+
+  const baseline = await context.repository.getBaselineSnapshot(caseId);
+
+  if (!baseline) {
+    return apiError("case_not_found");
+  }
+
+  const demoEventId = context.generateDemoEventId();
+  const result = prepareResetCaseFromSnapshot(
+    caseId,
+    baseline,
+    context.actor.actor_id,
+    context.now(),
+    demoEventId,
+  );
+
+  await context.repository.resetCase(result.case_update, {
+    id: demoEventId,
+    ...result.demo_event_insert,
+  });
+
+  return {
+    status: 200,
+    body: result.response,
+  };
+}
+
+export async function handleCloneCase(
+  context: BackendRequestContext,
+  caseId: CaseId,
+): Promise<ApiHandlerResponse<CloneCaseResponse>> {
+  const caseResult = getCase(await context.repository.getCaseRowById(caseId));
+
+  if (!caseResult.ok) {
+    return caseResult.error;
+  }
+
+  const caseIdForClone = context.generateCaseId();
+  const demoEventId = context.generateDemoEventId();
+  const result = prepareCloneCase(
+    caseResult.response.case,
+    context.actor.actor_id,
+    context.now(),
+    caseIdForClone,
+    demoEventId,
+  );
+
+  await context.repository.cloneCase(
+    {
+      id: caseIdForClone,
+      ...result.case_insert,
+    } satisfies CaseInsertWithId,
+    {
+      id: demoEventId,
+      ...result.source_demo_event_insert,
+    },
+  );
+
+  return {
+    status: 201,
+    body: result.response,
+  };
+}
+
+export async function handleReopenCase(
+  context: BackendRequestContext,
+  caseId: CaseId,
+): Promise<ApiHandlerResponse<ReopenCaseResponse>> {
+  const caseResult = getCase(await context.repository.getCaseRowById(caseId));
+
+  if (!caseResult.ok) {
+    return caseResult.error;
+  }
+
+  const demoEventId = context.generateDemoEventId();
+  const result = prepareReopenCase(
+    caseResult.response.case,
+    context.actor.actor_id,
+    context.now(),
+    demoEventId,
+  );
+
+  await context.repository.insertDemoEvent({
+    id: demoEventId,
+    ...result.demo_event_insert,
+  });
+
+  return {
+    status: 200,
+    body: result.response,
+  };
+}
+
 export type {
   CreateCaseRequest,
+  ResetCaseRequest,
   UpdateCaseConsentRequest,
 };
