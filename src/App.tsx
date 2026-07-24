@@ -1779,6 +1779,10 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to_status: toStatus, ...meta, message_sent: messageSent, message_text: messageText, message_custom: messageCustom }),
       });
+      if (res.status === 401 || res.status === 403) {
+        setTransitionError("Session expired — please sign in again.");
+        return false;
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error("transition failed:", err.error, err.message);
@@ -1814,6 +1818,10 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ patient_name: patientName, consent_flag: consentFlag }),
       });
+      if (res.status === 401 || res.status === 403) {
+        setCreateCaseError("Session expired — please sign in again.");
+        return;
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         setCreateCaseError(err.message ?? "Failed to create case. Please try again.");
