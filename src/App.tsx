@@ -1489,9 +1489,13 @@ function EmptyBodyNoResults() {
 function CreateCaseModal({
   onSubmit,
   onClose,
+  submitError,
+  isSubmitting,
 }: {
   onSubmit: (patientName: string, consentFlag: boolean) => void;
   onClose: () => void;
+  submitError: string | null;
+  isSubmitting: boolean;
 }) {
   const [patientName, setPatientName] = useState("");
   const [consentFlag, setConsentFlag] = useState(false);
@@ -1624,6 +1628,25 @@ function CreateCaseModal({
         </div>
       </div>
 
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            margin: "0 20px 12px",
+            padding: "10px 12px",
+            backgroundColor: "#FFF1F2",
+            border: "1px solid #FDA4AF",
+            borderRadius: 6,
+            fontSize: 13,
+            color: "#BE123C",
+            fontFamily: "Inter, sans-serif",
+            lineHeight: 1.4,
+          }}
+        >
+          {submitError}
+        </div>
+      )}
+
       {/* Footer */}
       <div
         style={{
@@ -1635,10 +1658,10 @@ function CreateCaseModal({
       >
         <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
         <PrimaryButton
-          disabled={nameEmpty}
+          disabled={nameEmpty || isSubmitting}
           onClick={() => onSubmit(patientName.trim(), consentFlag)}
         >
-          Create case
+          {isSubmitting ? "Creating…" : "Create case"}
         </PrimaryButton>
       </div>
     </ModalShell>
@@ -1658,29 +1681,32 @@ export default function App() {
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
   const [showCreateCase, setShowCreateCase] = useState(false);
+  const [createCaseError, setCreateCaseError] = useState<string | null>(null);
+  const [isCreatingCase, setIsCreatingCase] = useState(false);
   const [cases, setCases] = useState<CaseListItem[]>([]);
   const [transitionError, setTransitionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchCases = async () => {
-      if (!supabase) {
-        console.warn("Supabase env vars are not configured; skipping case fetch.");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('cases')
-        .select('id, patient_name, current_status, consent_flag, updated_at')
-        .order('updated_at', { ascending: false })
-
-      if (error) {
-        console.error('fetch cases error:', error.message)
-        return
-      }
-      if (data) setCases(data.map(({ id, patient_name, current_status, consent_flag, updated_at }) => ({
-        id, patient_name, status: current_status as PaStatus, consent_flag, updated_at,
-      })))
+  async function fetchCases() {
+    if (!supabase) {
+      console.warn("Supabase env vars are not configured; skipping case fetch.");
+      return;
     }
+
+    const { data, error } = await supabase
+      .from('cases')
+      .select('id, patient_name, current_status, consent_flag, updated_at')
+      .order('updated_at', { ascending: false })
+
+    if (error) {
+      console.error('fetch cases error:', error.message)
+      return
+    }
+    if (data) setCases(data.map(({ id, patient_name, current_status, consent_flag, updated_at }) => ({
+      id, patient_name, status: current_status as PaStatus, consent_flag, updated_at,
+    })))
+  }
+
+  useEffect(() => {
     fetchCases()
   }, [])
 
@@ -1767,9 +1793,28 @@ export default function App() {
     setShowCreateCase(true);
   }
 
-  function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
-    console.log("create case", { patientName, consentFlag });
-    setShowCreateCase(false);
+  async function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
+    setIsCreatingCase(true);
+    setCreateCaseError(null);
+    try {
+      const res = await fetch("/api/cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_name: patientName, consent_flag: consentFlag }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCreateCaseError(err.message ?? "Failed to create case. Please try again.");
+        return;
+      }
+      setShowCreateCase(false);
+      setCreateCaseError(null);
+      await fetchCases();
+    } catch {
+      setCreateCaseError("Connection error — case wasn't created. Try again.");
+    } finally {
+      setIsCreatingCase(false);
+    }
   }
 
   async function handleConsentUpdate(id: string) {
@@ -2265,7 +2310,9 @@ export default function App() {
         >
           <CreateCaseModal
             onSubmit={handleCreateCaseSubmit}
-            onClose={() => setShowCreateCase(false)}
+            onClose={() => { setShowCreateCase(false); setCreateCaseError(null); }}
+            submitError={createCaseError}
+            isSubmitting={isCreatingCase}
           />
         </div>
       )}
