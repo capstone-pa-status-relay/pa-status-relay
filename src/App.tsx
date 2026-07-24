@@ -736,8 +736,10 @@ function StatusDrawer({
             boxSizing: "border-box" as const,
           };
           const onFocus = (e: React.FocusEvent<HTMLElement>) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "#2563EB";
-            (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 2px rgba(37,99,235,0.15)";
+            if (e.target.matches(":focus-visible")) {
+              (e.currentTarget as HTMLElement).style.borderColor = "#2563EB";
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 2px rgba(37,99,235,0.15)";
+            }
           };
           const onBlur = (e: React.FocusEvent<HTMLElement>) => {
             (e.currentTarget as HTMLElement).style.borderColor = "#CBD5E1";
@@ -815,8 +817,10 @@ function StatusDrawer({
               outline: "none",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#2563EB";
-              e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB";
+              if (e.target.matches(":focus-visible")) {
+                e.currentTarget.style.borderColor = "#2563EB";
+                e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB";
+              }
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#CBD5E1";
@@ -1558,7 +1562,7 @@ function CreateCaseModal({
               boxSizing: "border-box",
               outline: "none",
             }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+            onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB"; }}
             onBlur={(e) => {
               setNameTouched(true);
               e.currentTarget.style.boxShadow = "none";
@@ -1917,7 +1921,7 @@ export default function App() {
                 border: "1px solid #CBD5E1",
                 fontFamily: "Inter, sans-serif",
               }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+              onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB"; }}
               onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             />
           </div>
@@ -1939,7 +1943,7 @@ export default function App() {
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#2563EB")}
             onClick={handleCreateCase}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)")}
+            onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)"; }}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             <PlusCircle size={14} aria-hidden="true" />
@@ -2067,7 +2071,7 @@ export default function App() {
                         style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "#2563EB" : "#CBD5E1" }}
                         onClick={(e) => { e.stopPropagation(); toggleCheck(String(c.id)); }}
                         aria-label={`Select ${c.patient_name}`}
-                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+                        onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB"; }}
                         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
                         {checked.has(String(c.id))
@@ -2080,7 +2084,7 @@ export default function App() {
                     {/* Patient + Drug */}
                     <td style={{ padding: "12px 16px" }}>
                       <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center" style={{ gap: 6 }}>
                           <span
                             style={{
                               fontSize: 14,
