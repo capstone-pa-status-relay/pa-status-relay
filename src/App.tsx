@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   PlusCircle, FileWarning, Send, Clock, AlertCircle,
   Stethoscope, CheckCircle2, XCircle, Lock,
-  Search, ChevronRight, Settings, Layers, ShieldAlert,
+  Search, ChevronRight, Settings, Layers, TriangleAlert,
   X, ChevronDown, Check, MessageSquare, AlertTriangle,
   Download, ExternalLink, FolderOpen, SearchX, Plus, User,
 } from "lucide-react";
@@ -2023,24 +2023,9 @@ export default function App() {
                     fontFamily: "Inter, sans-serif",
                   }}
                 >
-                  Consent
-                </th>
-                <th
-                  className="text-left"
-                  style={{
-                    padding: "12px 16px",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    lineHeight: 1.4,
-                    color: "#475569",
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    fontFamily: "Inter, sans-serif",
-                  }}
-                >
                   Last Updated
                 </th>
-                <th style={{ width: 40, padding: "12px 16px" }}>
+                <th style={{ width: 32, padding: "12px 12px 12px 0" }}>
                   <span className="sr-only">Action</span>
                 </th>
               </tr>
@@ -2090,17 +2075,24 @@ export default function App() {
                     {/* Patient + Drug */}
                     <td style={{ padding: "12px 16px" }}>
                       <div className="flex flex-col gap-0.5">
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 500,
-                            lineHeight: 1.43,
-                            color: "#0F172A",
-                            fontFamily: "Inter, sans-serif",
-                          }}
-                        >
-                          {c.patient_name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 500,
+                              lineHeight: 1.43,
+                              color: "#0F172A",
+                              fontFamily: "Inter, sans-serif",
+                            }}
+                          >
+                            {c.patient_name}
+                          </span>
+                          {!c.consent_flag && (
+                            <span aria-label="Consent suppressed" title="Patient has not consented to status updates">
+                              <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
+                            </span>
+                          )}
+                        </div>
                         <span
                           className="pa-mono"
                           style={{
@@ -2120,13 +2112,6 @@ export default function App() {
                       <StatusBadge key={c.status} status={c.status} className="pa-chip-animate" />
                     </td>
 
-                    {/* Consent */}
-                    <td style={{ padding: "12px 16px" }}>
-                      {!c.consent_flag && (
-                        <ShieldAlert size={15} style={{ color: "#B7770D" }} aria-label="Consent required" />
-                      )}
-                    </td>
-
                     {/* Last Updated */}
                     <td style={{ padding: "12px 16px" }}>
                       <span
@@ -2143,10 +2128,10 @@ export default function App() {
                     </td>
 
                     {/* Chevron */}
-                    <td style={{ padding: "12px 16px", width: 40 }}>
+                    <td style={{ width: 32, padding: "12px 12px 12px 0", textAlign: "right" }}>
                       <ChevronRight
                         size={16}
-                        style={{ color: "#94A3B8" }}
+                        style={{ color: "#94A3B8", display: "inline-block" }}
                         aria-hidden="true"
                       />
                     </td>
