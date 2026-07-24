@@ -102,11 +102,12 @@ export function prepareTransition(
     timestamp: auditInsert.timestamp,
     actor_id: auditInsert.actor_id,
     actor_label: auditInsert.actor_label,
-    action: "status_transition",
+    action: !currentCase.consent_flag ? "message_suppressed" : "status_transition",
     from_status: auditInsert.from_status,
     to_status: auditInsert.to_status,
-    reason_code: auditInsert.reason_code,
+    reason_code: !currentCase.consent_flag ? "no_consent" : auditInsert.reason_code,
     message_sent: auditInsert.message_sent,
+    message_text: auditInsert.message_text,
     message_custom: auditInsert.message_custom,
   };
 
