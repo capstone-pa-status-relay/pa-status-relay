@@ -4,7 +4,7 @@ import {
   Stethoscope, CheckCircle2, XCircle, Lock,
   Search, ChevronRight, Settings, Layers, ShieldAlert,
   X, ChevronDown, Check, MessageSquare, AlertTriangle,
-  Download, ExternalLink, FolderOpen, SearchX, Plus,
+  Download, ExternalLink, FolderOpen, SearchX, Plus, User,
 } from "lucide-react";
 import {
   getValidTransitions,
@@ -1831,6 +1831,30 @@ export default function App() {
             Settings
           </button>
         </nav>
+
+        {/* Bottom user row */}
+        <div
+          style={{
+            borderTop: "1px solid #E2E8F0",
+            padding: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <User size={16} aria-hidden="true" style={{ color: "#64748B", flexShrink: 0 }} />
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#475569",
+              fontFamily: "Inter, sans-serif",
+              lineHeight: 1.4,
+            }}
+          >
+            Demo Coordinator
+          </span>
+        </div>
       </aside>
 
       {/* ── Main Content ─────────────────────────────────────────────────────── */}
