@@ -620,8 +620,7 @@ function StatusDrawer({
             >
               Current status
             </span>
-            {/* TODO: hardcoded status — should derive from selectedCase.status */}
-            <StatusBadge status="submitted" />
+            <StatusBadge key={currentStatus} status={currentStatus} className="pa-chip-animate" />
           </div>
         </div>
         <button
