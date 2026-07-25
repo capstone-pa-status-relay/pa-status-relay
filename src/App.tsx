@@ -14,6 +14,7 @@ import {
   type PaStatus,
 } from "./backend/statusMachine";
 import { supabase } from "./lib/supabase";
+import { LoginScreen } from "./components/LoginScreen";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -1763,6 +1764,15 @@ function CreateCaseModal({
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!supabase) { setAuthed(true); return; }
+    supabase.auth.getSession().then(({ data }) => {
+      setAuthed(!!data.session);
+    });
+  }, []);
+
   const [activeFilter, setActiveFilter] = useState<PAStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -1955,6 +1965,9 @@ export default function App() {
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
 
+  if (authed === null) return null;
+  if (!authed) return <LoginScreen onSuccess={() => setAuthed(true)} />;
+
   return (
     <div
       className="relative flex h-screen w-full overflow-hidden"
@@ -2056,10 +2069,34 @@ export default function App() {
               color: "#475569",
               fontFamily: "Inter, sans-serif",
               lineHeight: 1.4,
+              flex: 1,
             }}
           >
             Demo Coordinator
           </span>
+          <button
+            type="button"
+            onClick={async () => {
+              if (supabase) await supabase.auth.signOut();
+              setAuthed(false);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 12,
+              color: "#94A3B8",
+              fontFamily: "Inter, sans-serif",
+              padding: "2px 4px",
+              borderRadius: 4,
+              lineHeight: 1.4,
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#475569")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#94A3B8")}
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 
