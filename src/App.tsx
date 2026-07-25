@@ -364,6 +364,7 @@ function MessagePreviewModal({
   onLogWithoutSending,
   onClose,
   onRecordConsent,
+  isEdited,
 }: {
   consentActive: boolean;
   messageText: string;
@@ -372,6 +373,7 @@ function MessagePreviewModal({
   onLogWithoutSending: () => void;
   onClose: () => void;
   onRecordConsent?: () => void;
+  isEdited: boolean;
 }) {
   return (
     <ModalShell>
@@ -429,8 +431,9 @@ function MessagePreviewModal({
           rows={3}
           style={{
             width: "100%",
-            backgroundColor: DS.bgCardSubtle,
+            backgroundColor: "#F4F6F8",
             border: `1px solid ${DS.borderInput}`,
+            borderLeft: "3px solid #2563EB",
             borderRadius: 6,
             padding: "8px 12px",
             fontSize: 14,
@@ -444,6 +447,10 @@ function MessagePreviewModal({
           }}
           aria-label="Patient message"
         />
+
+        {isEdited && (
+          <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>Edited</span>
+        )}
 
         {/* Audit note */}
         <p
@@ -493,7 +500,7 @@ function MessagePreviewModal({
               >
                 Consent required — record consent to enable message delivery.
               </p>
-              <SecondaryButton onClick={onRecordConsent}>Record consent</SecondaryButton>
+              <SecondaryButton disabled={!onRecordConsent} onClick={onRecordConsent}>Record consent</SecondaryButton>
             </div>
           </div>
         )}
@@ -508,7 +515,7 @@ function MessagePreviewModal({
           padding: "0 20px 20px",
         }}
       >
-        <SecondaryButton onClick={onLogWithoutSending}>Log without sending</SecondaryButton>
+        <SecondaryButton onClick={onLogWithoutSending}>Skip message</SecondaryButton>
         <PrimaryButton disabled={!consentActive} onClick={onConfirm}>Confirm and send</PrimaryButton>
       </div>
     </ModalShell>
@@ -613,8 +620,7 @@ function StatusDrawer({
             >
               Current status
             </span>
-            {/* TODO: hardcoded status — should derive from selectedCase.status */}
-            <StatusBadge status="submitted" />
+            <StatusBadge key={currentStatus} status={currentStatus} className="pa-chip-animate" />
           </div>
         </div>
         <button
@@ -969,7 +975,7 @@ function StatusDrawer({
 
 // ── Audit Trail ──────────────────────────────────────────────────────────────
 
-function FilterDropdown({ label }: { label: string }) {
+function FilterDropdown({ label, onChange: _onChange }: { label: string; onChange?: (value: string | null) => void }) {
   return (
     <button
       type="button"
@@ -1231,6 +1237,7 @@ function AuditDrawer({ onClose, selectedCase }: {
   const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
   const [filterActor, setFilterActor] = useState<string | null>(null);
   const [filterDateRange, setFilterDateRange] = useState<string | null>("last24h");
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const activeParts: string[] = [];
   if (filterActionType) activeParts.push(filterActionType);
@@ -1242,6 +1249,13 @@ function AuditDrawer({ onClose, selectedCase }: {
     const id = selectedCase?.id ?? "—";
     return id.length > 20 ? id.slice(0, 20) + "…" : id;
   })();
+
+  const filteredNodes = TIMELINE_NODES.filter((node) => {
+    if (filterActionType === "Status change" && node.type !== "transition") return false;
+    if (filterActor !== null && node.actor !== filterActor) return false;
+    // TODO: filter by filterDateRange when date-range picker is wired
+    return true;
+  });
 
   return (
     <div
@@ -1270,15 +1284,42 @@ function AuditDrawer({ onClose, selectedCase }: {
               Permanent record
             </span>
           </div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
-            style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
-            aria-label="Export CSV"
-          >
-            <Download size={13} aria-hidden="true" />
-            Export CSV
-          </button>
+          <div className="flex flex-col items-end gap-0.5">
+            <button
+              type="button"
+              disabled={selectedCase === null}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
+              aria-label="Export CSV"
+              onClick={async () => {
+                if (!selectedCase) return;
+                const res = await fetch(`/api/cases/${selectedCase.id}/audit/export`, { method: "GET" });
+                if (!res.ok) {
+                  setExportError("Export failed — try again.");
+                  return;
+                }
+                setExportError(null);
+                const disposition = res.headers.get("Content-Disposition") ?? "";
+                const match = disposition.match(/filename="?([^";\n]+)"?/);
+                const filename = match?.[1] ?? `audit_${selectedCase.id}_${new Date().toISOString().slice(0, 10)}.csv`;
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download size={13} aria-hidden="true" />
+              Export CSV
+            </button>
+            {exportError && (
+              <span role="alert" style={{ fontSize: 11, color: "#BE123C", fontFamily: "Inter, sans-serif", lineHeight: 1.4 }}>
+                {exportError}
+              </span>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -1345,9 +1386,9 @@ function AuditDrawer({ onClose, selectedCase }: {
         {/* Filter bar */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <FilterDropdown label="Action type" />
-            <FilterDropdown label="Actor" />
-            <FilterDropdown label="Date range" />
+            <FilterDropdown label="Action type" onChange={setFilterActionType} />
+            <FilterDropdown label="Actor" onChange={setFilterActor} />
+            <FilterDropdown label="Date range" onChange={setFilterDateRange} />
           </div>
           {activeParts.length > 0 && (
             <div className="flex items-center justify-between">
@@ -1369,8 +1410,8 @@ function AuditDrawer({ onClose, selectedCase }: {
 
         {/* Timeline */}
         <div className="flex flex-col">
-          {TIMELINE_NODES.map((node, i) => (
-            <TimelineNodeRow key={node.id} node={node} isLast={i === TIMELINE_NODES.length - 1} />
+          {filteredNodes.map((node, i) => (
+            <TimelineNodeRow key={node.id} node={node} isLast={i === filteredNodes.length - 1} />
           ))}
         </div>
 
@@ -1459,9 +1500,13 @@ function EmptyBodyNoResults() {
 function CreateCaseModal({
   onSubmit,
   onClose,
+  submitError,
+  isSubmitting,
 }: {
   onSubmit: (patientName: string, consentFlag: boolean) => void;
   onClose: () => void;
+  submitError: string | null;
+  isSubmitting: boolean;
 }) {
   const [patientName, setPatientName] = useState("");
   const [consentFlag, setConsentFlag] = useState(false);
@@ -1594,6 +1639,25 @@ function CreateCaseModal({
         </div>
       </div>
 
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            margin: "0 20px 12px",
+            padding: "10px 12px",
+            backgroundColor: "#FFF1F2",
+            border: "1px solid #FDA4AF",
+            borderRadius: 6,
+            fontSize: 13,
+            color: "#BE123C",
+            fontFamily: "Inter, sans-serif",
+            lineHeight: 1.4,
+          }}
+        >
+          {submitError}
+        </div>
+      )}
+
       {/* Footer */}
       <div
         style={{
@@ -1605,10 +1669,10 @@ function CreateCaseModal({
       >
         <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
         <PrimaryButton
-          disabled={nameEmpty}
+          disabled={nameEmpty || isSubmitting}
           onClick={() => onSubmit(patientName.trim(), consentFlag)}
         >
-          Create case
+          {isSubmitting ? "Creating…" : "Create case"}
         </PrimaryButton>
       </div>
     </ModalShell>
@@ -1628,31 +1692,42 @@ export default function App() {
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
   const [showCreateCase, setShowCreateCase] = useState(false);
+  const [createCaseError, setCreateCaseError] = useState<string | null>(null);
+  const [isCreatingCase, setIsCreatingCase] = useState(false);
   const [cases, setCases] = useState<CaseListItem[]>([]);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  async function fetchCases() {
+    if (!supabase) {
+      console.warn("Supabase env vars are not configured; skipping case fetch.");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('cases')
+      .select('id, patient_name, current_status, consent_flag, updated_at')
+      .order('updated_at', { ascending: false })
+
+    if (error) {
+      console.error('fetch cases error:', error.message)
+      return
+    }
+    if (data) setCases(data.map(({ id, patient_name, current_status, consent_flag, updated_at }) => ({
+      id, patient_name, status: current_status as PaStatus, consent_flag, updated_at,
+    })))
+  }
 
   useEffect(() => {
-    const fetchCases = async () => {
-      if (!supabase) {
-        console.warn("Supabase env vars are not configured; skipping case fetch.");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('cases')
-        .select('id, patient_name, current_status, consent_flag, updated_at')
-        .order('updated_at', { ascending: false })
-
-      if (error) {
-        console.error('fetch cases error:', error.message)
-        return
-      }
-      if (data) setCases(data.map(({ id, patient_name, current_status, consent_flag, updated_at }) => ({
-        id, patient_name, status: current_status as PaStatus, consent_flag, updated_at,
-      })))
-    }
     fetchCases()
   }, [])
+
+  useEffect(() => {
+    if (successToast) {
+      const t = setTimeout(() => setSuccessToast(null), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [successToast])
 
   useEffect(() => {
     if (!document.querySelector('link[data-pa-font]')) {
@@ -1711,6 +1786,10 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to_status: toStatus, ...meta, message_sent: messageSent, message_text: messageText, message_custom: messageCustom }),
       });
+      if (res.status === 401 || res.status === 403) {
+        setTransitionError("Session expired — please sign in again.");
+        return false;
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error("transition failed:", err.error, err.message);
@@ -1719,6 +1798,7 @@ export default function App() {
       }
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
+      setSuccessToast(`Status updated to ${BADGE_CONFIG[data.case.status as PAStatus]?.label ?? data.case.status}.`);
       // TODO: refetch audit trail when audit API is wired
       return true;
     } catch (err) {
@@ -1737,9 +1817,32 @@ export default function App() {
     setShowCreateCase(true);
   }
 
-  function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
-    console.log("create case", { patientName, consentFlag });
-    setShowCreateCase(false);
+  async function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
+    setIsCreatingCase(true);
+    setCreateCaseError(null);
+    try {
+      const res = await fetch("/api/cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_name: patientName, consent_flag: consentFlag }),
+      });
+      if (res.status === 401 || res.status === 403) {
+        setCreateCaseError("Session expired — please sign in again.");
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCreateCaseError(err.message ?? "Failed to create case. Please try again.");
+        return;
+      }
+      setShowCreateCase(false);
+      setCreateCaseError(null);
+      await fetchCases();
+    } catch {
+      setCreateCaseError("Connection error — case wasn't created. Try again.");
+    } finally {
+      setIsCreatingCase(false);
+    }
   }
 
   async function handleConsentUpdate(id: string) {
@@ -2235,7 +2338,9 @@ export default function App() {
         >
           <CreateCaseModal
             onSubmit={handleCreateCaseSubmit}
-            onClose={() => setShowCreateCase(false)}
+            onClose={() => { setShowCreateCase(false); setCreateCaseError(null); }}
+            submitError={createCaseError}
+            isSubmitting={isCreatingCase}
           />
         </div>
       )}
@@ -2269,7 +2374,43 @@ export default function App() {
             }}
             onClose={() => setModalOpen(false)}
             onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
+            isEdited={modalMessageText !== getPatientMessage(pendingToStatus ?? "new_order")}
           />
+        </div>
+      )}
+
+      {successToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 50,
+            backgroundColor: "#F0FDF4",
+            borderLeft: "3px solid #86EFAC",
+            borderRadius: 6,
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+            fontFamily: "Inter, sans-serif",
+            minWidth: 240,
+            maxWidth: 360,
+          }}
+        >
+          <CheckCircle2 size={16} aria-hidden="true" style={{ color: "#15803D", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: "#15803D", lineHeight: 1.4, flex: 1 }}>{successToast}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            aria-label="Dismiss"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#15803D", padding: 2, display: "flex", alignItems: "center", flexShrink: 0 }}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
     </div>
