@@ -70,7 +70,7 @@ export const PATIENT_MESSAGES: Record<PaStatus, string> = {
   peer_to_peer: "A clinical discussion has been requested by your insurance provider.",
   approved: "Your treatment is approved. Scheduling will contact you next.",
   denied: "Your insurance did not approve your request. Your care team will discuss next steps.",
-  closed: "Your authorization case is complete. For questions, contact [office #].",
+  closed: "Your authorization case is complete. For questions, contact (555) 555-0142.",
 };
 
 export const VALID_TRANSITIONS: Record<PaStatus, readonly PaStatus[]> = {
