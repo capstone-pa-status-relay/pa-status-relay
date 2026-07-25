@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 
 import casesHandler from "../api/cases/index.ts";
 import auditExportHandler from "../api/cases/[id]/audit/export.ts";
@@ -12,7 +12,20 @@ import resetHandler from "../api/cases/[id]/reset.ts";
 import transitionHandler from "../api/cases/[id]/transition.ts";
 import type { VercelResponse } from "../api/_shared.ts";
 
-test("mounted case routes return a configured 501 until Supabase repository is implemented", async () => {
+const ORIGINAL_SUPABASE_URL = process.env.SUPABASE_URL;
+const ORIGINAL_SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+beforeEach(() => {
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+});
+
+afterEach(() => {
+  restoreEnv("SUPABASE_URL", ORIGINAL_SUPABASE_URL);
+  restoreEnv("SUPABASE_SERVICE_ROLE_KEY", ORIGINAL_SUPABASE_SERVICE_ROLE_KEY);
+});
+
+test("mounted case routes return repository-not-configured when Supabase env vars are missing", async () => {
   const response = new MockResponse();
 
   await casesHandler({ method: "GET", query: {} }, response);
@@ -24,7 +37,7 @@ test("mounted case routes return a configured 501 until Supabase repository is i
   });
 });
 
-test("mounted transition route imports handler glue and returns the repository 501", async () => {
+test("mounted transition route imports handler glue and reports missing Supabase config", async () => {
   const response = new MockResponse();
 
   await transitionHandler(
@@ -45,7 +58,7 @@ test("mounted transition route imports handler glue and returns the repository 5
   assert.equal(response.statusCode, 501);
 });
 
-test("all mounted case subroutes import handler glue", async () => {
+test("all mounted case subroutes import handler glue and report missing Supabase config", async () => {
   const mountedRoutes = [
     { handler: caseHandler, method: "GET" },
     { handler: consentHandler, method: "PATCH", body: { consent_flag: true } },
@@ -104,5 +117,13 @@ class MockResponse implements VercelResponse {
 
   end(): void {
     return;
+  }
+}
+
+function restoreEnv(name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY", value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
   }
 }
