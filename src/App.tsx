@@ -610,6 +610,9 @@ function StatusDrawer({
   drug,
   isDrawerOpen,
   consentFlag,
+  onDemoReset,
+  onDemoClone,
+  onDemoReopen,
 }: {
   onClose: () => void;
   onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
@@ -622,6 +625,9 @@ function StatusDrawer({
   drug: string | null;
   isDrawerOpen: boolean;
   consentFlag: boolean;
+  onDemoReset: () => Promise<void>;
+  onDemoClone: () => Promise<void>;
+  onDemoReopen: () => Promise<void>;
 }) {
   const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
     () => getValidTransitions(currentStatus)[0] ?? "closed",
@@ -634,6 +640,8 @@ function StatusDrawer({
   const [reasonCode,      setReasonCode]      = useState("");
   const [appointmentLink, setAppointmentLink] = useState("");
   const [nextStepNote,    setNextStepNote]    = useState("");
+  const [demoLoading, setDemoLoading] = useState<"reset" | "clone" | "reopen" | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
 
   useEffect(() => {
     const first = getValidTransitions(currentStatus)[0] ?? "closed";
@@ -919,6 +927,88 @@ function StatusDrawer({
               <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
               <span style={{ fontSize: 13, fontWeight: 500, color: "#92400E", fontFamily: "Inter, sans-serif" }}>Consent required</span>
             </span>
+          )}
+        </div>
+
+        {/* Demo controls */}
+        <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 600,
+                color: "var(--pa-demo-text)",
+                backgroundColor: "var(--pa-demo-bg)",
+                border: "1px solid var(--pa-demo-border)",
+                borderRadius: 9999,
+                padding: "2px 8px",
+                lineHeight: 1,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Demo only
+            </span>
+            <span style={{ fontSize: 12, color: "#64748B", fontFamily: "Inter, sans-serif" }}>
+              Controls for scenario testing
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(
+              [
+                { key: "reset" as const,  label: "Reset to baseline" },
+                { key: "clone" as const,  label: "Clone case"        },
+                { key: "reopen" as const, label: "Re-open"           },
+              ] as const
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                disabled={demoLoading !== null}
+                onClick={async () => {
+                  if (key === "reset" && !window.confirm("Reset this case to its baseline state?")) return;
+                  setDemoLoading(key);
+                  setDemoError(null);
+                  try {
+                    if (key === "reset") await onDemoReset();
+                    else if (key === "clone") await onDemoClone();
+                    else await onDemoReopen();
+                  } catch (err) {
+                    setDemoError(err instanceof Error ? err.message : "Action failed.");
+                  } finally {
+                    setDemoLoading(null);
+                  }
+                }}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: demoLoading !== null ? "#94A3B8" : "#475569",
+                  backgroundColor: "#F1F5F9",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: 6,
+                  padding: "6px 12px",
+                  cursor: demoLoading !== null ? "not-allowed" : "pointer",
+                  fontFamily: "Inter, sans-serif",
+                  lineHeight: 1.4,
+                }}
+              >
+                {demoLoading === key ? "…" : label}
+              </button>
+            ))}
+          </div>
+          {demoError && (
+            <p
+              role="alert"
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: "#BE123C",
+                fontFamily: "Inter, sans-serif",
+                lineHeight: 1.4,
+                margin: "8px 0 0",
+              }}
+            >
+              {demoError}
+            </p>
           )}
         </div>
       </div>
@@ -1963,6 +2053,50 @@ export default function App() {
     }
   }
 
+  async function handleDemoReset() {
+    if (!selectedCaseId) return;
+    const res = await fetch(`/api/cases/${selectedCaseId}/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: true }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? "Reset failed.");
+    }
+    const data = await res.json();
+    setCases((prev) => prev.map((c) =>
+      c.id === selectedCaseId ? { ...c, status: data.case.status, updated_at: data.case.updated_at } : c
+    ));
+    setSuccessToast("Case reset to baseline.");
+  }
+
+  async function handleDemoClone() {
+    if (!selectedCaseId) return;
+    const res = await fetch(`/api/cases/${selectedCaseId}/clone`, { method: "POST" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? "Clone failed.");
+    }
+    await fetchCases();
+    setDrawerOpen(false);
+    setSuccessToast("Case cloned successfully.");
+  }
+
+  async function handleDemoReopen() {
+    if (!selectedCaseId) return;
+    const res = await fetch(`/api/cases/${selectedCaseId}/reopen`, { method: "POST" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? "Re-open failed.");
+    }
+    const data = await res.json();
+    setCases((prev) => prev.map((c) =>
+      c.id === selectedCaseId ? { ...c, status: data.case.status, updated_at: data.case.updated_at } : c
+    ));
+    setSuccessToast("Case re-opened.");
+  }
+
   const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
 
   if (authed === null) return null;
@@ -2407,6 +2541,9 @@ export default function App() {
             drug={selectedCase?.drug ?? null}
             isDrawerOpen={drawerOpen}
             consentFlag={selectedCase?.consent_flag ?? false}
+            onDemoReset={handleDemoReset}
+            onDemoClone={handleDemoClone}
+            onDemoReopen={handleDemoReopen}
           />
         </div>
 
