@@ -1,5 +1,5 @@
-import { handleTransitionCase } from "../../../src/backend/apiHandlers.ts";
-import type { TransitionCaseRequest } from "../../../src/backend/apiTypes.ts";
+import { handleTransitionCase } from "../../../../src/backend/apiHandlers.ts";
+import type { TransitionCaseRequest } from "../../../../src/backend/apiTypes.ts";
 import {
   createBackendContext,
   getCaseId,
@@ -9,7 +9,7 @@ import {
   type VercelRequest,
   type VercelResponse,
   withApiErrorBoundary,
-} from "../../_shared.ts";
+} from "../../../_shared.ts";
 
 export default async function handler(request: VercelRequest, response: VercelResponse): Promise<void> {
   await withApiErrorBoundary(response, async () => {

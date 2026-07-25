@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 
 import casesHandler from "../api/cases/index.ts";
-import auditExportHandler from "../api/cases/[id]/audit/export.ts";
+import auditExportHandler from "../api/cases/[id]/audit/export/index.ts";
 import auditHandler from "../api/cases/[id]/audit/index.ts";
-import cloneHandler from "../api/cases/[id]/clone.ts";
-import consentHandler from "../api/cases/[id]/consent.ts";
+import cloneHandler from "../api/cases/[id]/clone/index.ts";
+import consentHandler from "../api/cases/[id]/consent/index.ts";
 import caseHandler from "../api/cases/[id]/index.ts";
-import reopenHandler from "../api/cases/[id]/reopen.ts";
-import resetHandler from "../api/cases/[id]/reset.ts";
-import transitionHandler from "../api/cases/[id]/transition.ts";
+import reopenHandler from "../api/cases/[id]/reopen/index.ts";
+import resetHandler from "../api/cases/[id]/reset/index.ts";
+import transitionHandler from "../api/cases/[id]/transition/index.ts";
 import type { VercelResponse } from "../api/_shared.ts";
 
 const ORIGINAL_SUPABASE_URL = process.env.SUPABASE_URL;

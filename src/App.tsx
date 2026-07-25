@@ -1166,7 +1166,7 @@ function FilterDropdown({ label, value, options, onChange }: FilterDropdownProps
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+        className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
         style={{
           color: value ? "#2563EB" : "#4A5568",
           borderColor: value ? "#2563EB" : "#CBD5E1",
@@ -1921,6 +1921,7 @@ export default function App() {
   const [pendingToStatus, setPendingToStatus] = useState<PaStatus | null>(null);
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
+  const [auditCaseId, setAuditCaseId] = useState<string | null>(null);
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [createCaseError, setCreateCaseError] = useState<string | null>(null);
   const [isCreatingCase, setIsCreatingCase] = useState(false);
@@ -2146,6 +2147,7 @@ export default function App() {
   }
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
+  const auditCase = cases.find((c) => c.id === auditCaseId) ?? null;
 
   if (authed === null) return null;
   if (!authed) return <LoginScreen onSuccess={() => setAuthed(true)} />;
@@ -2607,7 +2609,7 @@ export default function App() {
           aria-modal="true"
           aria-label="Audit trail"
         >
-          <AuditDrawer onClose={() => setAuditOpen(false)} selectedCase={cases.find(c => c.id === selectedCaseId) ?? null} />
+          <AuditDrawer onClose={() => { setAuditOpen(false); setAuditCaseId(null); }} selectedCase={auditCase} />
         </div>
 
         {/* Dev-only: audit trail affordance — decide by Day 4 whether this earns a real home */}
@@ -2615,7 +2617,7 @@ export default function App() {
           <div className="absolute bottom-6 right-6 z-10">
             <button
               type="button"
-              onClick={() => setAuditOpen(true)}
+              onClick={() => { setAuditCaseId(selectedCaseId); setAuditOpen(true); }}
               className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
               style={{
                 backgroundColor: "#FFFFFF",
