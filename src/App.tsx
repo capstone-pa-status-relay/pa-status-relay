@@ -648,6 +648,7 @@ function StatusDrawer({
     setSelectedTransition(first);
     setMessageText(getPatientMessage(first));
     setGateError(null);
+    setDemoError(null);
     setDocLink(""); setReasonCode(""); setAppointmentLink(""); setNextStepNote("");
   }, [currentStatus]);
 
@@ -1366,9 +1367,10 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
 }
 
 // IMMUTABLE: no edit or delete controls rendered per audit trail spec
-function AuditDrawer({ onClose, selectedCase }: {
+function AuditDrawer({ onClose, selectedCase, refreshToken }: {
   onClose: () => void;
   selectedCase: CaseListItem | null;
+  refreshToken: number;
 }) {
   const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
   const [filterActor, setFilterActor] = useState<string | null>(null);
@@ -1429,7 +1431,7 @@ function AuditDrawer({ onClose, selectedCase }: {
       .catch(() => { if (!ignore) setAuditError("Failed to load audit trail. Try closing and reopening the case."); })
       .finally(() => { if (!ignore) setAuditLoading(false); });
     return () => { ignore = true; };
-  }, [auditCaseId]);
+  }, [auditCaseId, refreshToken]);
 
   const actorOptions = [...new Set(auditRows.map((r) => r.actor))];
 
@@ -1922,6 +1924,7 @@ export default function App() {
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditCaseId, setAuditCaseId] = useState<string | null>(null);
+  const [auditRefreshToken, setAuditRefreshToken] = useState(0);
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [createCaseError, setCreateCaseError] = useState<string | null>(null);
   const [isCreatingCase, setIsCreatingCase] = useState(false);
@@ -2034,7 +2037,7 @@ export default function App() {
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
       setSuccessToast(`Status updated to ${BADGE_CONFIG[data.case.status as PAStatus]?.label ?? data.case.status}.`);
-      // TODO: refetch audit trail when audit API is wired
+      if (auditOpen && auditCaseId === selectedCaseId) setAuditRefreshToken((t) => t + 1);
       return true;
     } catch (err) {
       console.error("transition error:", err);
@@ -2609,11 +2612,10 @@ export default function App() {
           aria-modal="true"
           aria-label="Audit trail"
         >
-          <AuditDrawer onClose={() => { setAuditOpen(false); setAuditCaseId(null); }} selectedCase={auditCase} />
+          <AuditDrawer onClose={() => { setAuditOpen(false); setAuditCaseId(null); }} selectedCase={auditCase} refreshToken={auditRefreshToken} />
         </div>
 
-        {/* Dev-only: audit trail affordance — decide by Day 4 whether this earns a real home */}
-        {import.meta.env.DEV && !drawerOpen && !auditOpen && (
+        {!drawerOpen && !auditOpen && (
           <div className="absolute bottom-6 right-6 z-10">
             <button
               type="button"
