@@ -1141,21 +1141,74 @@ function StatusDrawer({
 
 // ── Audit Trail ──────────────────────────────────────────────────────────────
 
-function FilterDropdown({ label, onChange: _onChange }: { label: string; onChange?: (value: string | null) => void }) {
+interface FilterDropdownProps {
+  label: string;
+  value: string | null;
+  options: string[];
+  onChange: (value: string | null) => void;
+}
+
+function FilterDropdown({ label, value, options, onChange }: FilterDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [open]);
+
   return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
-      style={{
-        color: "#4A5568",
-        borderColor: "#CBD5E1",
-        backgroundColor: "#FFFFFF",
-        fontFamily: "Inter, sans-serif",
-      }}
-    >
-      {label}
-      <ChevronDown size={13} aria-hidden="true" />
-    </button>
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+        style={{
+          color: value ? "#2563EB" : "#4A5568",
+          borderColor: value ? "#2563EB" : "#CBD5E1",
+          backgroundColor: "#FFFFFF",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
+        {value ?? label}
+        <ChevronDown
+          size={13}
+          aria-hidden="true"
+          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}
+        />
+      </button>
+      {open && (
+        <ul className="absolute left-0 top-full mt-1 z-50 min-w-max rounded-md border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {options.map((opt) => (
+            <li
+              key={opt}
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-50"
+              style={{
+                color: opt === value ? "#2563EB" : "#0F172A",
+                fontWeight: opt === value ? 500 : 400,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              {opt}
+            </li>
+          ))}
+          {value !== null && (
+            <li
+              onClick={() => { onChange(null); setOpen(false); }}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 border-t border-gray-100"
+              style={{ color: "#64748B", fontFamily: "Inter, sans-serif" }}
+            >
+              Clear
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -1319,7 +1372,7 @@ function AuditDrawer({ onClose, selectedCase }: {
 }) {
   const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
   const [filterActor, setFilterActor] = useState<string | null>(null);
-  const [filterDateRange, setFilterDateRange] = useState<string | null>("last24h");
+  const [filterDateRange, setFilterDateRange] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [auditRows, setAuditRows] = useState<TimelineNode[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
@@ -1378,11 +1431,12 @@ function AuditDrawer({ onClose, selectedCase }: {
     return () => { ignore = true; };
   }, [auditCaseId]);
 
+  const actorOptions = [...new Set(auditRows.map((r) => r.actor))];
+
   const activeParts: string[] = [];
   if (filterActionType) activeParts.push(filterActionType);
   if (filterActor) activeParts.push(filterActor);
-  if (filterDateRange === "last24h") activeParts.push("Last 24h");
-  else if (filterDateRange) activeParts.push(filterDateRange);
+  if (filterDateRange) activeParts.push(filterDateRange);
 
   const caseIdDisplay = (() => {
     const id = selectedCase?.id ?? "—";
@@ -1532,9 +1586,24 @@ function AuditDrawer({ onClose, selectedCase }: {
         {/* Filter bar */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <FilterDropdown label="Action type" onChange={setFilterActionType} />
-            <FilterDropdown label="Actor" onChange={setFilterActor} />
-            <FilterDropdown label="Date range" onChange={setFilterDateRange} />
+            <FilterDropdown
+              label="Action type"
+              value={filterActionType}
+              options={["Status change", "Message suppressed", "Custom message"]}
+              onChange={setFilterActionType}
+            />
+            <FilterDropdown
+              label="Actor"
+              value={filterActor}
+              options={actorOptions}
+              onChange={setFilterActor}
+            />
+            <FilterDropdown
+              label="Date range"
+              value={filterDateRange}
+              options={["Last 24h", "Last 7 days", "All time"]}
+              onChange={setFilterDateRange}
+            />
           </div>
           {activeParts.length > 0 && (
             <div className="flex items-center justify-between">
