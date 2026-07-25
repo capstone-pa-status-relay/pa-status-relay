@@ -140,6 +140,22 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rationale:** Current `main` is React/Vite/TypeScript and hosting is locked to Vercel. Vercel `/api` routes match the paths already used by `App.tsx` and keep backend behavior in the existing TypeScript service/handler contracts.
 **Rejected:** Express + SQLite + vanilla JS as the shared implementation stack - useful as a reference prototype only, but not directly mergeable into the canonical repo stack. Direct frontend calls to backend service helpers - bypasses API contracts and persistence boundaries.
 
+### D17 — Repository owner + auth strategy: service-role key, no user session yet
+**Date:** July 2026 (Day 5 morning)
+**Decision:** Lebert owns `src/backend/supabaseRepository.ts`. It uses a Supabase **service-role key**, server-side only (`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`, no `VITE_` prefix — never bundled client-side), which bypasses RLS entirely. This is deliberate: there is no real auth/session flow built anywhere in `src/` yet (no sign-in component, no `getSession`/`onAuthStateChange` calls), so requiring RLS's `authenticated` role would block every query with no way to satisfy it. Also fixed as part of this change: `api/_shared.ts`'s `actor_id` fallback was the literal string `"auth_user_id"` (not a UUID) — `App.tsx` never sends an `actor_id` query param, so this hit on every request and would have violated `actor_id`'s `uuid`/FK constraint on every write. `supabaseRepository.ts` now resolves any non-UUID `actor_id` to the real shared demo user (`coordinator@pastatusrelay.demo`, matching D09's one-credential-set design) as an interim fix.
+**Rationale:** Unblocks real persistence today without building a full auth system under deadline pressure. Matches D09's "one shared demo credential set" MVP scope.
+**Rejected:** Requiring a real signed-in session before the repository can function — blocks all persistence indefinitely until auth is built, and no auth work is otherwise scheduled before Saturday.
+**Still open:** Natalie's finding that `actor_id` is client-controllable (audit-attribution spoofing) is a separate, real gap in `api/_shared.ts` — this decision does not fix it, only prevents a hard crash. Real auth + identity binding is scaffold-layer work for whoever owns `api/_shared.ts`.
+
+### D18 — Schema additions: `cases.drug`, `cases.baseline_snapshot`, `audit_trail.action`
+**Date:** July 2026 (Day 5 morning)
+**Decision:** Three columns added to the live schema, applied via migration and backfilled on the 5 seed rows:
+- `cases.drug text` — `App.tsx` already reads `selectedCase?.drug`/`c.drug` in 3 places; the column never existed.
+- `cases.baseline_snapshot jsonb` — D14's Reset target had no storage location. Captured once at case creation (`insertCase`/`cloneCase`), shape is exactly `CaseBaselineSnapshot` (`patient_name`, `status`, `consent_flag`, `doc_link`, `appointment_link`, `next_step_note`). `drug` is intentionally excluded — it's case identity, not workflow state.
+- `audit_trail.action text check (action in ('status_transition','message_suppressed'))` — `transitionService.ts` (PR #20) already computes this value and `AUDIT_CSV_COLUMNS` already requires it; no column existed to persist it. Reuses the existing `reason_code` column for the suppression reason (`'no_consent'`) per the already-shipped `transitionService.ts` logic — no new column needed for that part.
+**Rationale:** All three were silent gaps between already-merged TypeScript logic/UI and the actual database — the code assumed columns that didn't exist.
+**Rejected:** A `suppressed_reason` column separate from `reason_code` — rejected because `transitionService.ts` already ships the `reason_code` dual-purpose mapping; adding a second column would mean re-deriving which one is authoritative.
+
 ---
 
 ## Open Items (resolve and move to Locked Decisions above)

@@ -25,11 +25,18 @@ create type pa_status as enum (
 create table cases (
   id uuid primary key default gen_random_uuid(),
   patient_name text not null,
+  drug text,
   current_status pa_status not null default 'new_order',
   consent_flag boolean not null default false,
   doc_link text,
   appointment_link text,
   next_step_note text,
+  -- D14 (Reset = snapshot restore) target. Captured once at case creation;
+  -- restored verbatim by resetCase(). Shape matches CaseBaselineSnapshot in
+  -- demoControlService.ts exactly: patient_name, status, consent_flag,
+  -- doc_link, appointment_link, next_step_note. drug is intentionally excluded
+  -- (not part of CaseBaselineSnapshot — it's case identity, not workflow state).
+  baseline_snapshot jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   created_by uuid references auth.users(id)
@@ -52,6 +59,11 @@ create policy "cases_update_authenticated" on cases
 create table audit_trail (
   id uuid primary key default gen_random_uuid(),
   case_id uuid not null references cases(id),
+  -- Set by transitionService.ts: consent_flag ? 'status_transition' : 'message_suppressed'.
+  -- When 'message_suppressed', reason_code is always the literal 'no_consent'
+  -- (same column reused deliberately — see transitionService.ts's auditReasonCode).
+  action text not null default 'status_transition'
+    check (action in ('status_transition', 'message_suppressed')),
   from_status pa_status,
   to_status pa_status not null,
   actor_id uuid not null references auth.users(id),
