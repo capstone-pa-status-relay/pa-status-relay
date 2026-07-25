@@ -613,6 +613,7 @@ function StatusDrawer({
   onDemoReset,
   onDemoClone,
   onDemoReopen,
+  onOpenAudit,
 }: {
   onClose: () => void;
   onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
@@ -628,6 +629,7 @@ function StatusDrawer({
   onDemoReset: () => Promise<void>;
   onDemoClone: () => Promise<void>;
   onDemoReopen: () => Promise<void>;
+  onOpenAudit: () => void;
 }) {
   const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
     () => getValidTransitions(currentStatus)[0] ?? "closed",
@@ -1012,6 +1014,23 @@ function StatusDrawer({
             </p>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={onOpenAudit}
+          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+          style={{
+            backgroundColor: "#FFFFFF",
+            color: "#4A5568",
+            borderColor: "#CBD5E1",
+            boxShadow: "0 1px 3px rgba(15,23,42,0.08)",
+            fontFamily: "Inter, sans-serif",
+            alignSelf: "flex-start",
+          }}
+        >
+          <Layers size={13} aria-hidden="true" />
+          Open audit trail
+        </button>
       </div>
 
       {transitionError && (
@@ -2597,6 +2616,7 @@ export default function App() {
             onDemoReset={handleDemoReset}
             onDemoClone={handleDemoClone}
             onDemoReopen={handleDemoReopen}
+            onOpenAudit={() => { setAuditCaseId(selectedCaseId); setAuditOpen(true); }}
           />
         </div>
 
@@ -2615,25 +2635,6 @@ export default function App() {
           <AuditDrawer onClose={() => { setAuditOpen(false); setAuditCaseId(null); }} selectedCase={auditCase} refreshToken={auditRefreshToken} />
         </div>
 
-        {!drawerOpen && !auditOpen && (
-          <div className="absolute bottom-6 right-6 z-10">
-            <button
-              type="button"
-              onClick={() => { setAuditCaseId(selectedCaseId); setAuditOpen(true); }}
-              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
-              style={{
-                backgroundColor: "#FFFFFF",
-                color: "#4A5568",
-                borderColor: "#CBD5E1",
-                boxShadow: "0 1px 3px rgba(15,23,42,0.08)",
-                fontFamily: "Inter, sans-serif",
-              }}
-            >
-              <Layers size={13} aria-hidden="true" />
-              Open audit trail
-            </button>
-          </div>
-        )}
       </main>
 
       {/* Overlay — covers full viewport including sidebar */}
