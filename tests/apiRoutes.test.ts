@@ -92,6 +92,25 @@ test("mounted CSV route imports handler glue and sets method guard", async () =>
   assert.equal(response.headers.Allow, "GET");
 });
 
+test("moved write-only case subroutes are registered and reject read-only GET checks", async () => {
+  const mountedWriteRoutes = [
+    { handler: transitionHandler, allow: "POST" },
+    { handler: consentHandler, allow: "PATCH" },
+    { handler: resetHandler, allow: "POST" },
+    { handler: cloneHandler, allow: "POST" },
+    { handler: reopenHandler, allow: "POST" },
+  ] as const;
+
+  for (const route of mountedWriteRoutes) {
+    const response = new MockResponse();
+
+    await route.handler({ method: "GET", query: { id: "case_001" } }, response);
+
+    assert.equal(response.statusCode, 405);
+    assert.equal(response.headers.Allow, route.allow);
+  }
+});
+
 class MockResponse implements VercelResponse {
   statusCode = 200;
   headers: Record<string, string> = {};
