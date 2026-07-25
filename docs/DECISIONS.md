@@ -156,6 +156,13 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rationale:** All three were silent gaps between already-merged TypeScript logic/UI and the actual database — the code assumed columns that didn't exist.
 **Rejected:** A `suppressed_reason` column separate from `reason_code` — rejected because `transitionService.ts` already ships the `reason_code` dual-purpose mapping; adding a second column would mean re-deriving which one is authoritative.
 
+### D19 — Atomic writes: Postgres RPC functions for transition/reset/clone
+**Date:** July 2026 (Day 5, PR #25 review — Chris)
+**Decision:** `applyTransition`/`resetCase`/`cloneCase` originally did two sequential writes each (case row, then audit_trail/demo_events row) via separate `supabase-js` calls — a failure on the second write left the case's status changed with no corresponding audit row, breaking "every successful transition writes exactly one audit row." Replaced with three Postgres functions (`apply_transition`, `reset_case`, `clone_case`) that do both writes inside one function call — a single plpgsql call is implicitly one transaction, so a raised exception rolls back everything in it. Verified directly: forced the audit insert to fail mid-call and confirmed the case update rolled back too (status and audit row count both unchanged).
+**Security note:** Supabase auto-grants `EXECUTE` to `anon`/`authenticated` on new functions by default (a `REVOKE ... FROM PUBLIC` alone does not remove this — it has to be revoked from those roles directly, which the migration does). These functions bypass all application-layer validation (state machine gates, consent logic), so they must only ever be called by the service-role-backed repository.
+**Rationale:** Chris's recommendation during PR review (option 1 of the two offered: atomic DB functions vs. explicitly accepting partial-write risk for MVP). Matches the audit-trail-integrity premise the whole project is built on.
+**Rejected:** Accepting the partial-write risk for MVP — rejected because a broken audit trail is a core product guarantee, not a polish item, and the fix cost was low (three small functions, no schema redesign).
+
 ---
 
 ## Open Items (resolve and move to Locked Decisions above)

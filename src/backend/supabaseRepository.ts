@@ -285,49 +285,39 @@ export function createSupabaseBackendRepository(): BackendRepository {
       caseUpdate: TransitionCaseUpdateDraft,
       auditInsert: TransitionAuditInsertDraft,
     ): Promise<TransitionPersistenceResult> {
-      const { data: caseData, error: caseError } = await getClient()
-        .from("cases")
-        .update({
-          current_status: caseUpdate.status,
-          doc_link: caseUpdate.doc_link,
-          appointment_link: caseUpdate.appointment_link,
-          next_step_note: caseUpdate.next_step_note,
-          updated_at: caseUpdate.updated_at,
-        })
-        .eq("id", caseUpdate.id)
-        .select("*")
-        .single();
+      // Case update + audit insert in one DB transaction (apply_transition RPC) —
+      // a single plpgsql function call is implicitly atomic, so a failed audit
+      // insert rolls back the case update too. See D19: previously these were
+      // two sequential writes, and a failure between them left a status change
+      // with no corresponding audit row.
+      const { data, error } = await getClient().rpc("apply_transition", {
+        p_case_id: caseUpdate.id,
+        p_status: caseUpdate.status,
+        p_doc_link: caseUpdate.doc_link,
+        p_appointment_link: caseUpdate.appointment_link,
+        p_next_step_note: caseUpdate.next_step_note,
+        p_updated_at: caseUpdate.updated_at,
+        p_action: auditInsert.action,
+        p_from_status: auditInsert.from_status,
+        p_to_status: auditInsert.to_status,
+        p_actor_id: resolveActorId(auditInsert.actor_id),
+        p_actor_label: auditInsert.actor_label,
+        p_timestamp: auditInsert.timestamp,
+        p_reason_code: auditInsert.reason_code,
+        p_audit_doc_link: auditInsert.doc_link,
+        p_message_sent: auditInsert.message_sent,
+        p_message_text: auditInsert.message_text,
+        p_message_custom: auditInsert.message_custom,
+      });
 
-      if (caseError) {
-        throw new Error(`applyTransition (case update): ${caseError.message}`);
+      if (error) {
+        throw new Error(`applyTransition: ${error.message}`);
       }
 
-      const { data: auditData, error: auditError } = await getClient()
-        .from("audit_trail")
-        .insert({
-          case_id: auditInsert.case_id,
-          action: auditInsert.action,
-          from_status: auditInsert.from_status,
-          to_status: auditInsert.to_status,
-          actor_id: resolveActorId(auditInsert.actor_id),
-          actor_label: auditInsert.actor_label,
-          timestamp: auditInsert.timestamp,
-          reason_code: auditInsert.reason_code,
-          doc_link: auditInsert.doc_link,
-          message_sent: auditInsert.message_sent,
-          message_text: auditInsert.message_text,
-          message_custom: auditInsert.message_custom,
-        })
-        .select("*")
-        .single();
-
-      if (auditError) {
-        throw new Error(`applyTransition (audit insert): ${auditError.message}`);
-      }
-
+      const result = data as { case_row: CasesTableRow; audit_entry: AuditTrailTableRow };
       return {
-        case_row: toCaseRow(caseData as CasesTableRow),
-        audit_entry: toAuditEntry(auditData as AuditTrailTableRow),
+        case_row: toCaseRow(result.case_row),
+        audit_entry: toAuditEntry(result.audit_entry),
       };
     },
 
@@ -335,30 +325,30 @@ export function createSupabaseBackendRepository(): BackendRepository {
       caseUpdate: ResetCaseUpdateDraft,
       demoEventInsert: DemoEventInsertWithId,
     ): Promise<ResetPersistenceResult> {
-      const { data: caseData, error: caseError } = await getClient()
-        .from("cases")
-        .update({
-          patient_name: caseUpdate.patient_name,
-          current_status: caseUpdate.current_status,
-          consent_flag: caseUpdate.consent_flag,
-          doc_link: caseUpdate.doc_link,
-          appointment_link: caseUpdate.appointment_link,
-          next_step_note: caseUpdate.next_step_note,
-          updated_at: caseUpdate.updated_at,
-        })
-        .eq("id", caseUpdate.id)
-        .select("*")
-        .single();
+      // Case update + demo_events insert in one DB transaction (reset_case RPC) — D19.
+      const { data, error } = await getClient().rpc("reset_case", {
+        p_case_id: caseUpdate.id,
+        p_patient_name: caseUpdate.patient_name,
+        p_status: caseUpdate.current_status,
+        p_consent_flag: caseUpdate.consent_flag,
+        p_doc_link: caseUpdate.doc_link,
+        p_appointment_link: caseUpdate.appointment_link,
+        p_next_step_note: caseUpdate.next_step_note,
+        p_updated_at: caseUpdate.updated_at,
+        p_demo_event_id: demoEventInsert.id,
+        p_actor_id: resolveActorId(demoEventInsert.actor_id),
+        p_demo_timestamp: demoEventInsert.timestamp,
+        p_notes: demoEventInsert.notes,
+      });
 
-      if (caseError) {
-        throw new Error(`resetCase (case update): ${caseError.message}`);
+      if (error) {
+        throw new Error(`resetCase: ${error.message}`);
       }
 
-      const demoEvent = await insertDemoEventRow(demoEventInsert);
-
+      const result = data as { case_row: CasesTableRow; demo_event: DemoEventsTableRow };
       return {
-        case_row: toCaseRow(caseData as CasesTableRow),
-        demo_event: demoEvent,
+        case_row: toCaseRow(result.case_row),
+        demo_event: toDemoEvent(result.demo_event),
       };
     },
 
@@ -366,35 +356,32 @@ export function createSupabaseBackendRepository(): BackendRepository {
       caseInsert: CaseInsertWithId,
       sourceDemoEventInsert: DemoEventInsertWithId,
     ): Promise<ClonePersistenceResult> {
+      // New case insert + source demo_events insert in one DB transaction
+      // (clone_case RPC) — D19.
       const baseline = baselineSnapshotFor(caseInsert);
-      const { data: caseData, error: caseError } = await getClient()
-        .from("cases")
-        .insert({
-          id: caseInsert.id,
-          patient_name: caseInsert.patient_name,
-          drug: caseInsert.drug,
-          current_status: caseInsert.current_status,
-          consent_flag: caseInsert.consent_flag,
-          doc_link: caseInsert.doc_link,
-          appointment_link: caseInsert.appointment_link,
-          next_step_note: caseInsert.next_step_note,
-          baseline_snapshot: baseline,
-          created_at: caseInsert.created_at,
-          updated_at: caseInsert.updated_at,
-          created_by: resolveActorId(caseInsert.created_by),
-        })
-        .select("*")
-        .single();
+      const { data, error } = await getClient().rpc("clone_case", {
+        p_new_case_id: caseInsert.id,
+        p_patient_name: caseInsert.patient_name,
+        p_drug: caseInsert.drug,
+        p_consent_flag: caseInsert.consent_flag,
+        p_baseline_snapshot: baseline,
+        p_created_at: caseInsert.created_at,
+        p_created_by: resolveActorId(caseInsert.created_by),
+        p_demo_event_id: sourceDemoEventInsert.id,
+        p_source_case_id: sourceDemoEventInsert.case_id,
+        p_actor_id: resolveActorId(sourceDemoEventInsert.actor_id),
+        p_demo_timestamp: sourceDemoEventInsert.timestamp,
+        p_notes: sourceDemoEventInsert.notes,
+      });
 
-      if (caseError) {
-        throw new Error(`cloneCase (case insert): ${caseError.message}`);
+      if (error) {
+        throw new Error(`cloneCase: ${error.message}`);
       }
 
-      const sourceDemoEvent = await insertDemoEventRow(sourceDemoEventInsert);
-
+      const result = data as { case_row: CasesTableRow; source_demo_event: DemoEventsTableRow };
       return {
-        case_row: toCaseRow(caseData as CasesTableRow),
-        source_demo_event: sourceDemoEvent,
+        case_row: toCaseRow(result.case_row),
+        source_demo_event: toDemoEvent(result.source_demo_event),
       };
     },
 
