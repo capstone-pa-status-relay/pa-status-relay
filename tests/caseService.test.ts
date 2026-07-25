@@ -53,6 +53,7 @@ test("maps Supabase case rows to API case summaries", () => {
   assert.deepEqual(mapCaseRowToSummary(rows[0]), {
     id: "case_001",
     patient_name: "Mock Patient One",
+    drug: null,
     status: "submitted",
     consent_flag: true,
     updated_at: "2026-07-21T15:00:00Z",
@@ -63,6 +64,7 @@ test("maps Supabase current_status to API status for case details", () => {
   assert.deepEqual(mapCaseRowToDetail(rows[0]), {
     id: "case_001",
     patient_name: "Mock Patient One",
+    drug: null,
     status: "submitted",
     consent_flag: true,
     doc_link: "https://example.test/doc-1",
@@ -79,6 +81,7 @@ test("lists cases with the correct API response shape", () => {
       {
         id: "case_001",
         patient_name: "Mock Patient One",
+        drug: null,
         status: "submitted",
         consent_flag: true,
         updated_at: "2026-07-21T15:00:00Z",
@@ -86,6 +89,7 @@ test("lists cases with the correct API response shape", () => {
       {
         id: "case_002",
         patient_name: "Mock Patient Two",
+        drug: null,
         status: "new_order",
         consent_flag: false,
         updated_at: "2026-07-21T14:00:00Z",
@@ -93,6 +97,7 @@ test("lists cases with the correct API response shape", () => {
       {
         id: "case_003",
         patient_name: "Mock Patient Three",
+        drug: null,
         status: "submitted",
         consent_flag: true,
         updated_at: "2026-07-21T16:00:00Z",
@@ -135,6 +140,7 @@ test("returns a single case detail", () => {
       case: {
         id: "case_002",
         patient_name: "Mock Patient Two",
+        drug: null,
         status: "new_order",
         consent_flag: false,
         doc_link: null,
@@ -177,6 +183,7 @@ test("prepares a create-case insert draft and API response", () => {
     create: {
       insert: {
         patient_name: "Mock Patient Four",
+        drug: null,
         current_status: "new_order",
         consent_flag: true,
         doc_link: "https://example.test/doc-4",
@@ -190,6 +197,7 @@ test("prepares a create-case insert draft and API response", () => {
         case: {
           id: "case_004",
           patient_name: "Mock Patient Four",
+          drug: null,
           status: "new_order",
           consent_flag: true,
           doc_link: "https://example.test/doc-4",

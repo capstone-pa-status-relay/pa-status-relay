@@ -85,7 +85,7 @@ export function prepareResetCaseFromSnapshot(
 }
 
 export function prepareCloneCase(
-  sourceCase: Pick<CaseDetail, "id" | "patient_name" | "consent_flag">,
+  sourceCase: Pick<CaseDetail, "id" | "patient_name" | "consent_flag" | "drug">,
   actorId: ActorId,
   timestamp: IsoTimestamp,
   generatedCaseId: CaseId,
@@ -94,6 +94,7 @@ export function prepareCloneCase(
   const sourceDemoEventInsert = prepareCloneDemoEvent(sourceCase.id, actorId, timestamp);
   const caseInsert: CaseInsertDraft = {
     patient_name: sourceCase.patient_name,
+    drug: sourceCase.drug,
     current_status: "new_order",
     consent_flag: sourceCase.consent_flag,
     doc_link: null,

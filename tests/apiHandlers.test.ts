@@ -104,6 +104,7 @@ test("lists cases through the repository boundary using API response field names
         {
           id: "case_001",
           patient_name: "Mock Patient One",
+          drug: null,
           status: "new_order",
           consent_flag: true,
           updated_at: "2026-07-21T15:00:00Z",
@@ -111,6 +112,7 @@ test("lists cases through the repository boundary using API response field names
         {
           id: "case_002",
           patient_name: "Mock Patient Two",
+          drug: null,
           status: "pending_review",
           consent_flag: false,
           updated_at: "2026-07-21T14:00:00Z",
@@ -146,6 +148,7 @@ test("creates a case with generated id and repository insert draft", async () =>
   assert.deepEqual(repository.insertedCases[0], {
     id: "generated_case_001",
     patient_name: "New Demo Patient",
+    drug: null,
     current_status: "new_order",
     consent_flag: true,
     doc_link: "intake-packet",
@@ -337,6 +340,7 @@ test("clones a case with an independent new_order case and source demo event", a
   assert.deepEqual(repository.insertedCases[0], {
     id: "generated_case_001",
     patient_name: "Mock Patient One",
+    drug: null,
     current_status: "new_order",
     consent_flag: true,
     doc_link: null,
