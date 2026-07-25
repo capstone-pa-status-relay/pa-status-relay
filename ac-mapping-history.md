@@ -166,3 +166,11 @@ All PRD-derived files have since been rebuilt against the complete document. `QA
 - PR #21 merged to main later today: /api route scaffold mounted, routes now return 501 backend_repository_not_configured; D16 locked (Vercel serverless as canonical API strategy).
 - PR #21 scaffold review completed: 4 findings (2 High — no auth enforcement, actor_id client-spoofable; 1 Medium — malformed JSON → 500; 1 Low — id coerces to empty string), reported to team.
 - Remaining dependency: Supabase BackendRepository implementation + seed execution (Lebert's lane).
+
+## 2026-07-25 (Post-PR #25 Full Verification Run)
+- Branch: chore/day-2-evening-acmappng-regression-test
+- Step 1 complete: app opened on local dev server and rendered empty case list; live DB precheck returned `CASES_COUNT 0` from Supabase (read-only query).
+- PR #25 confirmed: repository layer now executes real Supabase queries (`createSupabaseBackendRepository` + `listCaseRows`), but this does not auto-seed data.
+- Seed method confirmed (not executed): run [supabase/schema.sql](supabase/schema.sql#L7) in Supabase SQL Editor, then run [supabase/seed.sql](supabase/seed.sql#L3) / insert rows starting at [supabase/seed.sql](supabase/seed.sql#L11).
+- Step 2 status: Golden, Edge, and Adversarial live checks blocked pending seed rows in `cases`.
+- Safety rule followed: no write operations executed against shared live database during this run.
