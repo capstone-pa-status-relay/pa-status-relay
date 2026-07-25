@@ -14,6 +14,7 @@ import {
   type PaStatus,
 } from "./backend/statusMachine";
 import { supabase } from "./lib/supabase";
+import { LoginScreen } from "./components/LoginScreen";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -609,6 +610,9 @@ function StatusDrawer({
   drug,
   isDrawerOpen,
   consentFlag,
+  onDemoReset,
+  onDemoClone,
+  onDemoReopen,
 }: {
   onClose: () => void;
   onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
@@ -621,6 +625,9 @@ function StatusDrawer({
   drug: string | null;
   isDrawerOpen: boolean;
   consentFlag: boolean;
+  onDemoReset: () => Promise<void>;
+  onDemoClone: () => Promise<void>;
+  onDemoReopen: () => Promise<void>;
 }) {
   const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
     () => getValidTransitions(currentStatus)[0] ?? "closed",
@@ -633,12 +640,15 @@ function StatusDrawer({
   const [reasonCode,      setReasonCode]      = useState("");
   const [appointmentLink, setAppointmentLink] = useState("");
   const [nextStepNote,    setNextStepNote]    = useState("");
+  const [demoLoading, setDemoLoading] = useState<"reset" | "clone" | "reopen" | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
 
   useEffect(() => {
     const first = getValidTransitions(currentStatus)[0] ?? "closed";
     setSelectedTransition(first);
     setMessageText(getPatientMessage(first));
     setGateError(null);
+    setDemoError(null);
     setDocLink(""); setReasonCode(""); setAppointmentLink(""); setNextStepNote("");
   }, [currentStatus]);
 
@@ -920,6 +930,88 @@ function StatusDrawer({
             </span>
           )}
         </div>
+
+        {/* Demo controls */}
+        <div style={{ borderTop: "1px solid #E2E8F0", paddingTop: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 600,
+                color: "var(--pa-demo-text)",
+                backgroundColor: "var(--pa-demo-bg)",
+                border: "1px solid var(--pa-demo-border)",
+                borderRadius: 9999,
+                padding: "2px 8px",
+                lineHeight: 1,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Demo only
+            </span>
+            <span style={{ fontSize: 12, color: "#64748B", fontFamily: "Inter, sans-serif" }}>
+              Controls for scenario testing
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(
+              [
+                { key: "reset" as const,  label: "Reset to baseline" },
+                { key: "clone" as const,  label: "Clone case"        },
+                { key: "reopen" as const, label: "Re-open"           },
+              ] as const
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                disabled={demoLoading !== null}
+                onClick={async () => {
+                  if (key === "reset" && !window.confirm("Reset this case to its baseline state?")) return;
+                  setDemoLoading(key);
+                  setDemoError(null);
+                  try {
+                    if (key === "reset") await onDemoReset();
+                    else if (key === "clone") await onDemoClone();
+                    else await onDemoReopen();
+                  } catch (err) {
+                    setDemoError(err instanceof Error ? err.message : "Action failed.");
+                  } finally {
+                    setDemoLoading(null);
+                  }
+                }}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: demoLoading !== null ? "#94A3B8" : "#475569",
+                  backgroundColor: "#F1F5F9",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: 6,
+                  padding: "6px 12px",
+                  cursor: demoLoading !== null ? "not-allowed" : "pointer",
+                  fontFamily: "Inter, sans-serif",
+                  lineHeight: 1.4,
+                }}
+              >
+                {demoLoading === key ? "…" : label}
+              </button>
+            ))}
+          </div>
+          {demoError && (
+            <p
+              role="alert"
+              style={{
+                marginTop: 8,
+                fontSize: 12,
+                color: "#BE123C",
+                fontFamily: "Inter, sans-serif",
+                lineHeight: 1.4,
+                margin: "8px 0 0",
+              }}
+            >
+              {demoError}
+            </p>
+          )}
+        </div>
       </div>
 
       {transitionError && (
@@ -1050,21 +1142,74 @@ function StatusDrawer({
 
 // ── Audit Trail ──────────────────────────────────────────────────────────────
 
-function FilterDropdown({ label, onChange: _onChange }: { label: string; onChange?: (value: string | null) => void }) {
+interface FilterDropdownProps {
+  label: string;
+  value: string | null;
+  options: string[];
+  onChange: (value: string | null) => void;
+}
+
+function FilterDropdown({ label, value, options, onChange }: FilterDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleMouseDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [open]);
+
   return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
-      style={{
-        color: "#4A5568",
-        borderColor: "#CBD5E1",
-        backgroundColor: "#FFFFFF",
-        fontFamily: "Inter, sans-serif",
-      }}
-    >
-      {label}
-      <ChevronDown size={13} aria-hidden="true" />
-    </button>
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-sm font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+        style={{
+          color: value ? "#2563EB" : "#4A5568",
+          borderColor: value ? "#2563EB" : "#CBD5E1",
+          backgroundColor: "#FFFFFF",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
+        {value ?? label}
+        <ChevronDown
+          size={13}
+          aria-hidden="true"
+          style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}
+        />
+      </button>
+      {open && (
+        <ul className="absolute left-0 top-full mt-1 z-50 min-w-max rounded-md border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {options.map((opt) => (
+            <li
+              key={opt}
+              onClick={() => { onChange(opt); setOpen(false); }}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-50"
+              style={{
+                color: opt === value ? "#2563EB" : "#0F172A",
+                fontWeight: opt === value ? 500 : 400,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              {opt}
+            </li>
+          ))}
+          {value !== null && (
+            <li
+              onClick={() => { onChange(null); setOpen(false); }}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 border-t border-gray-100"
+              style={{ color: "#64748B", fontFamily: "Inter, sans-serif" }}
+            >
+              Clear
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -1136,80 +1281,7 @@ interface TimelineNode {
   metadata?: MetadataCardProps;
 }
 
-const TIMELINE_NODES: TimelineNode[] = [
-  {
-    id: "n1",
-    timestamp: "Jul 20, 2026 · 9:14 AM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "submitted",
-    to: "approved",
-    metadata: {
-      reasonCode: "",
-      messageSent: true,
-      messageCustom: false,
-      messageText: "Your treatment is approved. Scheduling will contact you next.",
-    },
-  },
-  {
-    id: "n2",
-    timestamp: "Jul 20, 2026 · 8:55 AM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "pending_review",
-    to: "submitted",
-    metadata: {
-      docLink: "intake-docs.example.com/okafor-1041",
-      messageSent: true,
-      messageCustom: false,
-    },
-  },
-  {
-    id: "n3",
-    timestamp: "Jul 19, 2026 · 3:40 PM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "pending_review",
-    to: "pending_review",
-    metadata: {
-      reasonCode: "clinical_notes_complete",
-      messageSent: true,
-      messageCustom: false,
-    },
-  },
-  {
-    id: "n4",
-    timestamp: "Jul 19, 2026 · 3:38 PM",
-    actor: "Demo Coordinator",
-    type: "demo",
-    demoLabel: "Case reset to baseline",
-  },
-];
 
-function NeedsDocsBadge() {
-  return (
-    <span
-      className="inline-flex items-center gap-[5px] font-semibold rounded-full whitespace-nowrap"
-      style={{
-        backgroundColor: "var(--pa-badge-needs-doc-bg)",
-        color: "var(--pa-badge-needs-doc-text)",
-        border: "1px solid var(--pa-badge-needs-doc-border)",
-        fontSize: "10px",
-        fontWeight: 600,
-        lineHeight: 1,
-        paddingLeft: "10px",
-        paddingRight: "10px",
-        paddingTop: "4px",
-        paddingBottom: "4px",
-        fontFamily: "Inter, sans-serif",
-      }}
-      aria-label="Status: Needs Documentation"
-    >
-      <FileWarning size={12} aria-hidden="true" />
-      Needs Documentation
-    </span>
-  );
-}
 
 function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean }) {
   const isDemo = node.type === "demo";
@@ -1281,19 +1353,9 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-1.5">
-              {node.id === "n3" ? (
-                <>
-                  <NeedsDocsBadge />
-                  <span style={{ color: "#718096", fontSize: 12 }}>→</span>
-                  <StatusBadge status="pending_review" size="sm" />
-                </>
-              ) : (
-                <>
-                  {node.from && <StatusBadge status={node.from} size="sm" />}
-                  <span style={{ color: "#718096", fontSize: 12 }}>→</span>
-                  {node.to && <StatusBadge status={node.to} size="sm" />}
-                </>
-              )}
+              {node.from && <StatusBadge status={node.from} size="sm" />}
+              <span style={{ color: "#718096", fontSize: 12 }}>→</span>
+              {node.to && <StatusBadge status={node.to} size="sm" />}
             </div>
           )}
         </div>
@@ -1305,27 +1367,85 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
 }
 
 // IMMUTABLE: no edit or delete controls rendered per audit trail spec
-function AuditDrawer({ onClose, selectedCase }: {
+function AuditDrawer({ onClose, selectedCase, refreshToken }: {
   onClose: () => void;
   selectedCase: CaseListItem | null;
+  refreshToken: number;
 }) {
   const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
   const [filterActor, setFilterActor] = useState<string | null>(null);
-  const [filterDateRange, setFilterDateRange] = useState<string | null>("last24h");
+  const [filterDateRange, setFilterDateRange] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [auditRows, setAuditRows] = useState<TimelineNode[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
+
+  const auditCaseId = selectedCase?.id ?? null;
+
+  useEffect(() => {
+    if (!auditCaseId) { setAuditRows([]); return; }
+    let ignore = false;
+    setAuditLoading(true);
+    setAuditError(null);
+    fetch(`/api/cases/${auditCaseId}/audit`)
+      .then((res) => {
+        if (!res.ok) throw new Error("fetch failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (ignore) return;
+        setAuditRows(
+          (data.audit ?? []).map((row: {
+            id: string;
+            from_status: PaStatus | null;
+            to_status: PaStatus;
+            actor_label: string;
+            timestamp: string;
+            reason_code: string | null;
+            doc_link: string | null;
+            message_sent: boolean;
+            message_text: string | null;
+            message_custom: boolean;
+          }) => {
+            const d = new Date(row.timestamp);
+            const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+            return {
+              id: row.id,
+              timestamp: `${date} · ${time}`,
+              actor: row.actor_label,
+              type: "transition" as const,
+              from: row.from_status ?? undefined,
+              to: row.to_status,
+              metadata: {
+                reasonCode: row.reason_code ?? undefined,
+                docLink: row.doc_link ?? undefined,
+                messageSent: row.message_sent,
+                messageText: row.message_text ?? undefined,
+                messageCustom: row.message_custom,
+              },
+            };
+          }),
+        );
+      })
+      .catch(() => { if (!ignore) setAuditError("Failed to load audit trail. Try closing and reopening the case."); })
+      .finally(() => { if (!ignore) setAuditLoading(false); });
+    return () => { ignore = true; };
+  }, [auditCaseId, refreshToken]);
+
+  const actorOptions = [...new Set(auditRows.map((r) => r.actor))];
 
   const activeParts: string[] = [];
   if (filterActionType) activeParts.push(filterActionType);
   if (filterActor) activeParts.push(filterActor);
-  if (filterDateRange === "last24h") activeParts.push("Last 24h");
-  else if (filterDateRange) activeParts.push(filterDateRange);
+  if (filterDateRange) activeParts.push(filterDateRange);
 
   const caseIdDisplay = (() => {
     const id = selectedCase?.id ?? "—";
     return id.length > 20 ? id.slice(0, 20) + "…" : id;
   })();
 
-  const filteredNodes = TIMELINE_NODES.filter((node) => {
+  const filteredNodes = auditRows.filter((node) => {
     if (filterActionType === "Status change" && node.type !== "transition") return false;
     if (filterActor !== null && node.actor !== filterActor) return false;
     // TODO: filter by filterDateRange when date-range picker is wired
@@ -1468,9 +1588,24 @@ function AuditDrawer({ onClose, selectedCase }: {
         {/* Filter bar */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <FilterDropdown label="Action type" onChange={setFilterActionType} />
-            <FilterDropdown label="Actor" onChange={setFilterActor} />
-            <FilterDropdown label="Date range" onChange={setFilterDateRange} />
+            <FilterDropdown
+              label="Action type"
+              value={filterActionType}
+              options={["Status change", "Message suppressed", "Custom message"]}
+              onChange={setFilterActionType}
+            />
+            <FilterDropdown
+              label="Actor"
+              value={filterActor}
+              options={actorOptions}
+              onChange={setFilterActor}
+            />
+            <FilterDropdown
+              label="Date range"
+              value={filterDateRange}
+              options={["Last 24h", "Last 7 days", "All time"]}
+              onChange={setFilterDateRange}
+            />
           </div>
           {activeParts.length > 0 && (
             <div className="flex items-center justify-between">
@@ -1492,9 +1627,15 @@ function AuditDrawer({ onClose, selectedCase }: {
 
         {/* Timeline */}
         <div className="flex flex-col">
-          {filteredNodes.map((node, i) => (
-            <TimelineNodeRow key={node.id} node={node} isLast={i === filteredNodes.length - 1} />
-          ))}
+          {auditLoading ? (
+            <span style={{ fontSize: 13, color: "#64748B", fontFamily: "Inter, sans-serif" }}>Loading audit trail…</span>
+          ) : auditError ? (
+            <span role="alert" style={{ fontSize: 13, color: "#BE123C", fontFamily: "Inter, sans-serif" }}>{auditError}</span>
+          ) : (
+            filteredNodes.map((node, i) => (
+              <TimelineNodeRow key={node.id} node={node} isLast={i === filteredNodes.length - 1} />
+            ))
+          )}
         </div>
 
       </div>
@@ -1763,6 +1904,15 @@ function CreateCaseModal({
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!supabase) { setAuthed(true); return; }
+    supabase.auth.getSession().then(({ data }) => {
+      setAuthed(!!data.session);
+    });
+  }, []);
+
   const [activeFilter, setActiveFilter] = useState<PAStatus | "all">("all");
   const [search, setSearch] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -1773,6 +1923,8 @@ export default function App() {
   const [pendingToStatus, setPendingToStatus] = useState<PaStatus | null>(null);
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
+  const [auditCaseId, setAuditCaseId] = useState<string | null>(null);
+  const [auditRefreshToken, setAuditRefreshToken] = useState(0);
   const [showCreateCase, setShowCreateCase] = useState(false);
   const [createCaseError, setCreateCaseError] = useState<string | null>(null);
   const [isCreatingCase, setIsCreatingCase] = useState(false);
@@ -1885,7 +2037,7 @@ export default function App() {
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
       setSuccessToast(`Status updated to ${BADGE_CONFIG[data.case.status as PAStatus]?.label ?? data.case.status}.`);
-      // TODO: refetch audit trail when audit API is wired
+      if (auditOpen && auditCaseId === selectedCaseId) setAuditRefreshToken((t) => t + 1);
       return true;
     } catch (err) {
       console.error("transition error:", err);
@@ -1953,7 +2105,55 @@ export default function App() {
     }
   }
 
+  async function handleDemoReset() {
+    if (!selectedCaseId) return;
+    const res = await fetch(`/api/cases/${selectedCaseId}/reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: true }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? "Reset failed.");
+    }
+    const data = await res.json();
+    setCases((prev) => prev.map((c) =>
+      c.id === selectedCaseId ? { ...c, status: data.case.status, updated_at: data.case.updated_at } : c
+    ));
+    setSuccessToast("Case reset to baseline.");
+  }
+
+  async function handleDemoClone() {
+    if (!selectedCaseId) return;
+    const res = await fetch(`/api/cases/${selectedCaseId}/clone`, { method: "POST" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? "Clone failed.");
+    }
+    await fetchCases();
+    setDrawerOpen(false);
+    setSuccessToast("Case cloned successfully.");
+  }
+
+  async function handleDemoReopen() {
+    if (!selectedCaseId) return;
+    const res = await fetch(`/api/cases/${selectedCaseId}/reopen`, { method: "POST" });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? "Re-open failed.");
+    }
+    const data = await res.json();
+    setCases((prev) => prev.map((c) =>
+      c.id === selectedCaseId ? { ...c, status: data.case.status, updated_at: data.case.updated_at } : c
+    ));
+    setSuccessToast("Case re-opened.");
+  }
+
   const selectedCase = cases.find((c) => c.id === selectedCaseId) ?? null;
+  const auditCase = cases.find((c) => c.id === auditCaseId) ?? null;
+
+  if (authed === null) return null;
+  if (!authed) return <LoginScreen onSuccess={() => setAuthed(true)} />;
 
   return (
     <div
@@ -2056,10 +2256,34 @@ export default function App() {
               color: "#475569",
               fontFamily: "Inter, sans-serif",
               lineHeight: 1.4,
+              flex: 1,
             }}
           >
             Demo Coordinator
           </span>
+          <button
+            type="button"
+            onClick={async () => {
+              if (supabase) await supabase.auth.signOut();
+              setAuthed(false);
+            }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 12,
+              color: "#94A3B8",
+              fontFamily: "Inter, sans-serif",
+              padding: "2px 4px",
+              borderRadius: 4,
+              lineHeight: 1.4,
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#475569")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "#94A3B8")}
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -2370,6 +2594,9 @@ export default function App() {
             drug={selectedCase?.drug ?? null}
             isDrawerOpen={drawerOpen}
             consentFlag={selectedCase?.consent_flag ?? false}
+            onDemoReset={handleDemoReset}
+            onDemoClone={handleDemoClone}
+            onDemoReopen={handleDemoReopen}
           />
         </div>
 
@@ -2385,15 +2612,14 @@ export default function App() {
           aria-modal="true"
           aria-label="Audit trail"
         >
-          <AuditDrawer onClose={() => setAuditOpen(false)} selectedCase={cases.find(c => c.id === selectedCaseId) ?? null} />
+          <AuditDrawer onClose={() => { setAuditOpen(false); setAuditCaseId(null); }} selectedCase={auditCase} refreshToken={auditRefreshToken} />
         </div>
 
-        {/* Dev-only: audit trail affordance — decide by Day 4 whether this earns a real home */}
-        {import.meta.env.DEV && !drawerOpen && !auditOpen && (
+        {!drawerOpen && !auditOpen && (
           <div className="absolute bottom-6 right-6 z-10">
             <button
               type="button"
-              onClick={() => setAuditOpen(true)}
+              onClick={() => { setAuditCaseId(selectedCaseId); setAuditOpen(true); }}
               className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold leading-[1.4] transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
               style={{
                 backgroundColor: "#FFFFFF",

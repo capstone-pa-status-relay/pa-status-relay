@@ -1,4 +1,4 @@
-import { handleCloneCase } from "../../../src/backend/apiHandlers.ts";
+import { handleReopenCase } from "../../../../src/backend/apiHandlers.ts";
 import {
   createBackendContext,
   getCaseId,
@@ -7,7 +7,7 @@ import {
   type VercelRequest,
   type VercelResponse,
   withApiErrorBoundary,
-} from "../../_shared.ts";
+} from "../../../_shared.ts";
 
 export default async function handler(request: VercelRequest, response: VercelResponse): Promise<void> {
   await withApiErrorBoundary(response, async () => {
@@ -15,6 +15,6 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return;
     }
 
-    sendJson(response, await handleCloneCase(createBackendContext(request), getCaseId(request)));
+    sendJson(response, await handleReopenCase(createBackendContext(request), getCaseId(request)));
   });
 }

@@ -1,17 +1,13 @@
-import {
-  handleResetCase,
-  type ResetCaseRequest,
-} from "../../../src/backend/apiHandlers.ts";
+import { handleCloneCase } from "../../../../src/backend/apiHandlers.ts";
 import {
   createBackendContext,
   getCaseId,
-  parseBody,
   requireMethod,
   sendJson,
   type VercelRequest,
   type VercelResponse,
   withApiErrorBoundary,
-} from "../../_shared.ts";
+} from "../../../_shared.ts";
 
 export default async function handler(request: VercelRequest, response: VercelResponse): Promise<void> {
   await withApiErrorBoundary(response, async () => {
@@ -19,13 +15,6 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return;
     }
 
-    sendJson(
-      response,
-      await handleResetCase(
-        createBackendContext(request),
-        getCaseId(request),
-        parseBody<ResetCaseRequest>(request),
-      ),
-    );
+    sendJson(response, await handleCloneCase(createBackendContext(request), getCaseId(request)));
   });
 }

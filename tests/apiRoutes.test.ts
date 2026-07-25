@@ -1,18 +1,31 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 
 import casesHandler from "../api/cases/index.ts";
-import auditExportHandler from "../api/cases/[id]/audit/export.ts";
+import auditExportHandler from "../api/cases/[id]/audit/export/index.ts";
 import auditHandler from "../api/cases/[id]/audit/index.ts";
-import cloneHandler from "../api/cases/[id]/clone.ts";
-import consentHandler from "../api/cases/[id]/consent.ts";
+import cloneHandler from "../api/cases/[id]/clone/index.ts";
+import consentHandler from "../api/cases/[id]/consent/index.ts";
 import caseHandler from "../api/cases/[id]/index.ts";
-import reopenHandler from "../api/cases/[id]/reopen.ts";
-import resetHandler from "../api/cases/[id]/reset.ts";
-import transitionHandler from "../api/cases/[id]/transition.ts";
+import reopenHandler from "../api/cases/[id]/reopen/index.ts";
+import resetHandler from "../api/cases/[id]/reset/index.ts";
+import transitionHandler from "../api/cases/[id]/transition/index.ts";
 import type { VercelResponse } from "../api/_shared.ts";
 
-test("mounted case routes return a configured 501 until Supabase repository is implemented", async () => {
+const ORIGINAL_SUPABASE_URL = process.env.SUPABASE_URL;
+const ORIGINAL_SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+beforeEach(() => {
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+});
+
+afterEach(() => {
+  restoreEnv("SUPABASE_URL", ORIGINAL_SUPABASE_URL);
+  restoreEnv("SUPABASE_SERVICE_ROLE_KEY", ORIGINAL_SUPABASE_SERVICE_ROLE_KEY);
+});
+
+test("mounted case routes return repository-not-configured when Supabase env vars are missing", async () => {
   const response = new MockResponse();
 
   await casesHandler({ method: "GET", query: {} }, response);
@@ -24,7 +37,7 @@ test("mounted case routes return a configured 501 until Supabase repository is i
   });
 });
 
-test("mounted transition route imports handler glue and returns the repository 501", async () => {
+test("mounted transition route imports handler glue and reports missing Supabase config", async () => {
   const response = new MockResponse();
 
   await transitionHandler(
@@ -45,7 +58,7 @@ test("mounted transition route imports handler glue and returns the repository 5
   assert.equal(response.statusCode, 501);
 });
 
-test("all mounted case subroutes import handler glue", async () => {
+test("all mounted case subroutes import handler glue and report missing Supabase config", async () => {
   const mountedRoutes = [
     { handler: caseHandler, method: "GET" },
     { handler: consentHandler, method: "PATCH", body: { consent_flag: true } },
@@ -79,6 +92,25 @@ test("mounted CSV route imports handler glue and sets method guard", async () =>
   assert.equal(response.headers.Allow, "GET");
 });
 
+test("moved write-only case subroutes are registered and reject read-only GET checks", async () => {
+  const mountedWriteRoutes = [
+    { handler: transitionHandler, allow: "POST" },
+    { handler: consentHandler, allow: "PATCH" },
+    { handler: resetHandler, allow: "POST" },
+    { handler: cloneHandler, allow: "POST" },
+    { handler: reopenHandler, allow: "POST" },
+  ] as const;
+
+  for (const route of mountedWriteRoutes) {
+    const response = new MockResponse();
+
+    await route.handler({ method: "GET", query: { id: "case_001" } }, response);
+
+    assert.equal(response.statusCode, 405);
+    assert.equal(response.headers.Allow, route.allow);
+  }
+});
+
 class MockResponse implements VercelResponse {
   statusCode = 200;
   headers: Record<string, string> = {};
@@ -104,5 +136,13 @@ class MockResponse implements VercelResponse {
 
   end(): void {
     return;
+  }
+}
+
+function restoreEnv(name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY", value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
   }
 }
