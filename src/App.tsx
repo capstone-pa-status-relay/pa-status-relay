@@ -1227,80 +1227,7 @@ interface TimelineNode {
   metadata?: MetadataCardProps;
 }
 
-const TIMELINE_NODES: TimelineNode[] = [
-  {
-    id: "n1",
-    timestamp: "Jul 20, 2026 · 9:14 AM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "submitted",
-    to: "approved",
-    metadata: {
-      reasonCode: "",
-      messageSent: true,
-      messageCustom: false,
-      messageText: "Your treatment is approved. Scheduling will contact you next.",
-    },
-  },
-  {
-    id: "n2",
-    timestamp: "Jul 20, 2026 · 8:55 AM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "pending_review",
-    to: "submitted",
-    metadata: {
-      docLink: "intake-docs.example.com/okafor-1041",
-      messageSent: true,
-      messageCustom: false,
-    },
-  },
-  {
-    id: "n3",
-    timestamp: "Jul 19, 2026 · 3:40 PM",
-    actor: "Demo Coordinator",
-    type: "transition",
-    from: "pending_review",
-    to: "pending_review",
-    metadata: {
-      reasonCode: "clinical_notes_complete",
-      messageSent: true,
-      messageCustom: false,
-    },
-  },
-  {
-    id: "n4",
-    timestamp: "Jul 19, 2026 · 3:38 PM",
-    actor: "Demo Coordinator",
-    type: "demo",
-    demoLabel: "Case reset to baseline",
-  },
-];
 
-function NeedsDocsBadge() {
-  return (
-    <span
-      className="inline-flex items-center gap-[5px] font-semibold rounded-full whitespace-nowrap"
-      style={{
-        backgroundColor: "var(--pa-badge-needs-doc-bg)",
-        color: "var(--pa-badge-needs-doc-text)",
-        border: "1px solid var(--pa-badge-needs-doc-border)",
-        fontSize: "10px",
-        fontWeight: 600,
-        lineHeight: 1,
-        paddingLeft: "10px",
-        paddingRight: "10px",
-        paddingTop: "4px",
-        paddingBottom: "4px",
-        fontFamily: "Inter, sans-serif",
-      }}
-      aria-label="Status: Needs Documentation"
-    >
-      <FileWarning size={12} aria-hidden="true" />
-      Needs Documentation
-    </span>
-  );
-}
 
 function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean }) {
   const isDemo = node.type === "demo";
@@ -1372,19 +1299,9 @@ function TimelineNodeRow({ node, isLast }: { node: TimelineNode; isLast: boolean
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-1.5">
-              {node.id === "n3" ? (
-                <>
-                  <NeedsDocsBadge />
-                  <span style={{ color: "#718096", fontSize: 12 }}>→</span>
-                  <StatusBadge status="pending_review" size="sm" />
-                </>
-              ) : (
-                <>
-                  {node.from && <StatusBadge status={node.from} size="sm" />}
-                  <span style={{ color: "#718096", fontSize: 12 }}>→</span>
-                  {node.to && <StatusBadge status={node.to} size="sm" />}
-                </>
-              )}
+              {node.from && <StatusBadge status={node.from} size="sm" />}
+              <span style={{ color: "#718096", fontSize: 12 }}>→</span>
+              {node.to && <StatusBadge status={node.to} size="sm" />}
             </div>
           )}
         </div>
@@ -1404,6 +1321,62 @@ function AuditDrawer({ onClose, selectedCase }: {
   const [filterActor, setFilterActor] = useState<string | null>(null);
   const [filterDateRange, setFilterDateRange] = useState<string | null>("last24h");
   const [exportError, setExportError] = useState<string | null>(null);
+  const [auditRows, setAuditRows] = useState<TimelineNode[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
+
+  const auditCaseId = selectedCase?.id ?? null;
+
+  useEffect(() => {
+    if (!auditCaseId) { setAuditRows([]); return; }
+    let ignore = false;
+    setAuditLoading(true);
+    setAuditError(null);
+    fetch(`/api/cases/${auditCaseId}/audit`)
+      .then((res) => {
+        if (!res.ok) throw new Error("fetch failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (ignore) return;
+        setAuditRows(
+          (data.audit ?? []).map((row: {
+            id: string;
+            from_status: PaStatus | null;
+            to_status: PaStatus;
+            actor_label: string;
+            timestamp: string;
+            reason_code: string | null;
+            doc_link: string | null;
+            message_sent: boolean;
+            message_text: string | null;
+            message_custom: boolean;
+          }) => {
+            const d = new Date(row.timestamp);
+            const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+            const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+            return {
+              id: row.id,
+              timestamp: `${date} · ${time}`,
+              actor: row.actor_label,
+              type: "transition" as const,
+              from: row.from_status ?? undefined,
+              to: row.to_status,
+              metadata: {
+                reasonCode: row.reason_code ?? undefined,
+                docLink: row.doc_link ?? undefined,
+                messageSent: row.message_sent,
+                messageText: row.message_text ?? undefined,
+                messageCustom: row.message_custom,
+              },
+            };
+          }),
+        );
+      })
+      .catch(() => { if (!ignore) setAuditError("Failed to load audit trail. Try closing and reopening the case."); })
+      .finally(() => { if (!ignore) setAuditLoading(false); });
+    return () => { ignore = true; };
+  }, [auditCaseId]);
 
   const activeParts: string[] = [];
   if (filterActionType) activeParts.push(filterActionType);
@@ -1416,7 +1389,7 @@ function AuditDrawer({ onClose, selectedCase }: {
     return id.length > 20 ? id.slice(0, 20) + "…" : id;
   })();
 
-  const filteredNodes = TIMELINE_NODES.filter((node) => {
+  const filteredNodes = auditRows.filter((node) => {
     if (filterActionType === "Status change" && node.type !== "transition") return false;
     if (filterActor !== null && node.actor !== filterActor) return false;
     // TODO: filter by filterDateRange when date-range picker is wired
@@ -1583,9 +1556,15 @@ function AuditDrawer({ onClose, selectedCase }: {
 
         {/* Timeline */}
         <div className="flex flex-col">
-          {filteredNodes.map((node, i) => (
-            <TimelineNodeRow key={node.id} node={node} isLast={i === filteredNodes.length - 1} />
-          ))}
+          {auditLoading ? (
+            <span style={{ fontSize: 13, color: "#64748B", fontFamily: "Inter, sans-serif" }}>Loading audit trail…</span>
+          ) : auditError ? (
+            <span role="alert" style={{ fontSize: 13, color: "#BE123C", fontFamily: "Inter, sans-serif" }}>{auditError}</span>
+          ) : (
+            filteredNodes.map((node, i) => (
+              <TimelineNodeRow key={node.id} node={node} isLast={i === filteredNodes.length - 1} />
+            ))
+          )}
         </div>
 
       </div>
