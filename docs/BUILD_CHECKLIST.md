@@ -70,10 +70,9 @@ Roles in this file:
 - [ ] **[SYNC]** Reviewed Case List frame — API response shape matches what frontend needs
 
 **QA (~2.5 hrs)**
-- [ ] 5 scripted demo scenarios written: each has named starting state, step-by-step actions, and expected output (see QA_SCENARIOS.md)
-- [ ] Every P0 acceptance criterion from PRD Section 3 mapped to at least one test case
-- [ ] Ambiguous ACs flagged and shared with team for resolution
-- [ ] Presentation deck structure created: problem, solution, demo flow, metrics, next steps (placeholder slides)
+- [x] 5 scripted demo scenarios reviewed and confirmed as authoritative test set
+- [x] AC-to-test mapping created (AC_MAPPING.md), 3 ambiguous ACs flagged to team
+- [x] Deck structure delivered
 
 **End of Day 1 check**
 - [ ] Auth flow works end-to-end: sign in → see case list
@@ -131,11 +130,11 @@ Roles in this file:
 - [ ] demo_events row written on source case (event_type = 'clone')
 
 **QA (~2.5 hrs)**
-- [ ] Dry-run of Scenario 1 (New Order → Submitted → Pending Review) against live build
-- [ ] Bugs documented with repro steps
-- [ ] Problem slide complete with market data
-- [ ] Market Opportunity slide complete
-- [ ] State machine diagram slide built
+- [x] AC mapping audit run against live app, line-level references (branch: chore/day-2-evening-acmappng-regression-test)
+- [x] Eval Card executed against live app (Golden/Edge/Adversarial)
+- [x] Full debug audit: FULL_DEBUG_REPORT.md — 7 P0s, 10 P1s, repro steps and line citations
+- [x] All findings handed off audit-only
+- [x] Day 2 QA work split across two days due to persistence blocker
 
 **End of Day 2 check**
 - [ ] Coordinator can create a case and see it in the list
@@ -191,11 +190,12 @@ Roles in this file:
 - [ ] Full integration tested: status change → preview modal → confirm → audit row appears
 
 **QA (~3 hrs)**
-- [ ] Scenarios 1, 2, and 3 run against Day 3 build
-- [ ] All bugs logged with severity: demo-blocking / cosmetic / nice-to-fix
-- [ ] Demo-blocking bugs shared with team before EOD
-- [ ] Demo Flow slide complete (use Scenario 1 as narrative spine)
-- [ ] Success Metrics slide first draft complete
+- [x] Presentation completed and reviewed with instructor (approved)
+- [x] Realistic synthetic seed data delivered to team (seed JS file)
+- [x] Cooper-style user journey written (USER_JOURNEY.md)
+- [x] Formal blocking review filed on PR #16 (4 findings, line numbers, in permanent GitHub record)
+- [x] Fix guide written against real schemas (mapper spec, transition write path, drug-field finding)
+- [x] CODEOWNERS protection locked on Mercator and audit tooling, logged in DECISIONS.md
 
 **End of Day 3 check**
 - [ ] Status change → message preview modal → confirm → audit entry: works end-to-end
@@ -240,12 +240,14 @@ This is the float day. If anything from Days 2–3 slipped, it gets caught here.
 - [ ] Clone → navigate to new case → run scenario: works without errors
 
 **QA (~3 hrs)**
-- [ ] Full regression: all 5 scenarios run as dress rehearsal
-- [ ] Each scenario checked against QA_SCENARIOS.md line by line
-- [ ] No demo-blocking bugs remaining (or escalated to team immediately)
-- [ ] All slides complete except live demo screenshots
-- [ ] Presenter notes written for each slide
-- [ ] Reviewer feedback form ready (minimum: 2-question form)
+- [x] Mercator strict pass run post-merge of PRs #18/#19/#20, appended to ac-mapping-history.md
+- [x] PR #18/#19/#20 review completed (PR_18_19_20_REVIEW.md) — PR #20 suppressed-message fix verified correct
+- [x] First live Supabase connection established (env vars configured); KEY FINDING: live cases table empty, seed.sql never executed
+- [x] PR #21 scaffold security review: 4 findings (2 High — no auth, actor_id spoofable), reported to team
+- [x] End-of-day chronicle appended to ac-mapping-history.md
+- [ ] Full Scenario 1 dry run — BLOCKED: BackendRepository not implemented
+- [ ] 54-test regression pass — BLOCKED: same dependency
+- [ ] Note: Both items re-run same-day once the Supabase BackendRepository lands and seed.sql is executed (Lebert's lane, per team assignment).
 
 **End of Day 4 check**
 - [ ] All 5 scenarios run without errors on the hosted demo URL
