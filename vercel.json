@@ -4,7 +4,10 @@
   "framework": "vite",
   "functions": {
     "api/**/*.ts": {
-      "includeFiles": "src/backend/**"
+      "includeFiles": [
+        "api/_shared.ts",
+        "src/backend/**"
+      ]
     }
   }
 }
