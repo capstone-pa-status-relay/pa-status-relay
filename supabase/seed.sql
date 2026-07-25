@@ -6,9 +6,18 @@
 -- exists yet at seed time (created_by is nullable), and the spec's seed
 -- section only calls for the 5 case rows, not synthetic audit history.
 
-insert into cases (patient_name, current_status, consent_flag) values
-  ('Demo Patient 1', 'new_order',           true),   -- Scenario 1: full happy path
-  ('Demo Patient 2', 'needs_documentation', true),   -- Scenario 2: docs missing at intake
-  ('Demo Patient 3', 'pending_review',      false),  -- Scenario 3: consent gating
-  ('Demo Patient 4', 'info_request',        true),   -- Scenario 4: payer info request branch
-  ('Demo Patient 5', 'peer_to_peer',        true);   -- Scenario 5: P2P → Pending Review constraint
+-- baseline_snapshot mirrors each row's starting status/consent/metadata exactly —
+-- Reset restores to this, so it must match the seeded state, not an empty state.
+insert into cases (patient_name, drug, current_status, consent_flag, baseline_snapshot) values
+  ('Demo Patient 1', 'Pembrolizumab', 'new_order',           true,
+    jsonb_build_object('patient_name', 'Demo Patient 1', 'status', 'new_order', 'consent_flag', true, 'doc_link', null, 'appointment_link', null, 'next_step_note', null)),
+  ('Demo Patient 2', 'Nivolumab',     'needs_documentation', true,
+    jsonb_build_object('patient_name', 'Demo Patient 2', 'status', 'needs_documentation', 'consent_flag', true, 'doc_link', null, 'appointment_link', null, 'next_step_note', null)),
+  ('Demo Patient 3', 'Trastuzumab',   'pending_review',      false,
+    jsonb_build_object('patient_name', 'Demo Patient 3', 'status', 'pending_review', 'consent_flag', false, 'doc_link', null, 'appointment_link', null, 'next_step_note', null)),
+  ('Demo Patient 4', 'Rituximab',     'info_request',        true,
+    jsonb_build_object('patient_name', 'Demo Patient 4', 'status', 'info_request', 'consent_flag', true, 'doc_link', null, 'appointment_link', null, 'next_step_note', null)),
+  ('Demo Patient 5', 'Bevacizumab',   'peer_to_peer',         true,
+    jsonb_build_object('patient_name', 'Demo Patient 5', 'status', 'peer_to_peer', 'consent_flag', true, 'doc_link', null, 'appointment_link', null, 'next_step_note', null));
+-- Scenario 1: full happy path · Scenario 2: docs missing at intake · Scenario 3: consent gating
+-- Scenario 4: payer info request branch · Scenario 5: P2P → Pending Review constraint

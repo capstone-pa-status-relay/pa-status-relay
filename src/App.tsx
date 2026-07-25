@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   PlusCircle, FileWarning, Send, Clock, AlertCircle,
   Stethoscope, CheckCircle2, XCircle, Lock,
-  Search, ChevronRight, Settings, Layers, ShieldAlert,
+  Search, ChevronRight, Settings, Layers, TriangleAlert,
   X, ChevronDown, Check, MessageSquare, AlertTriangle,
-  Download, ExternalLink, FolderOpen, SearchX, Plus,
+  Download, ExternalLink, FolderOpen, SearchX, Plus, User,
 } from "lucide-react";
 import {
   getValidTransitions,
@@ -14,9 +15,14 @@ import {
 } from "./backend/statusMachine";
 import { supabase } from "./lib/supabase";
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 type CaseListItem = {
   id: string;
   patient_name: string;
+  drug: string | null;
   status: PaStatus;
   consent_flag: boolean;
   updated_at: string;
@@ -147,17 +153,39 @@ function TransitionDropdown({
   currentStatus,
   value,
   onChange,
+  isDrawerOpen,
 }: {
   currentStatus: PaStatus;
   value: PaStatus;
   onChange: (v: PaStatus) => void;
+  isDrawerOpen: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [portalPos, setPortalPos] = useState({ top: 0, left: 0, width: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const options = getValidTransitions(currentStatus);
+
+  useEffect(() => {
+    if (!isDrawerOpen) setOpen(false);
+  }, [isDrawerOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) setPortalPos({ top: rect.bottom + window.scrollY + 4, left: rect.left, width: rect.width });
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
 
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((p) => !p)}
         className="w-full flex items-center justify-between px-3 py-2 rounded-md border text-left"
@@ -184,11 +212,16 @@ function TransitionDropdown({
         />
       </button>
 
-      {open && (
+      {open && createPortal(
         <ul
           role="listbox"
-          className="absolute left-0 right-0 mt-1 rounded-md border overflow-hidden z-10"
+          className="rounded-md border overflow-hidden"
           style={{
+            position: "fixed",
+            top: portalPos.top,
+            left: portalPos.left,
+            width: portalPos.width,
+            zIndex: 9999,
             backgroundColor: "#FFFFFF",
             borderColor: "#CBD5E1",
             boxShadow: "0 4px 6px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.06)",
@@ -200,8 +233,9 @@ function TransitionDropdown({
               role="option"
               aria-selected={option === value}
               onClick={() => { onChange(option); setOpen(false); }}
-              className="flex items-center justify-between px-3 py-2 cursor-pointer"
+              className="flex items-center justify-between cursor-pointer"
               style={{
+                padding: "10px 16px",
                 backgroundColor: option === value ? "var(--pa-primary-subtle)" : "transparent",
               }}
               onMouseEnter={(e) => {
@@ -214,7 +248,17 @@ function TransitionDropdown({
               }}
             >
               <div className="flex items-center gap-2">
-                <StatusBadge status={option} />
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: option === value ? 500 : 400,
+                    color: "#1A1F2E",
+                    fontFamily: "Inter, sans-serif",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {BADGE_CONFIG[option as PAStatus].label}
+                </span>
                 {RETURN_PATHS.has(`${currentStatus}->${option}`) && (
                   <span
                     style={{
@@ -238,7 +282,8 @@ function TransitionDropdown({
               )}
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   );
@@ -364,6 +409,7 @@ function MessagePreviewModal({
   onLogWithoutSending,
   onClose,
   onRecordConsent,
+  isEdited,
 }: {
   consentActive: boolean;
   messageText: string;
@@ -372,6 +418,7 @@ function MessagePreviewModal({
   onLogWithoutSending: () => void;
   onClose: () => void;
   onRecordConsent?: () => void;
+  isEdited: boolean;
 }) {
   return (
     <ModalShell>
@@ -429,8 +476,9 @@ function MessagePreviewModal({
           rows={3}
           style={{
             width: "100%",
-            backgroundColor: DS.bgCardSubtle,
+            backgroundColor: "#F4F6F8",
             border: `1px solid ${DS.borderInput}`,
+            borderLeft: "3px solid #2563EB",
             borderRadius: 6,
             padding: "8px 12px",
             fontSize: 14,
@@ -444,6 +492,10 @@ function MessagePreviewModal({
           }}
           aria-label="Patient message"
         />
+
+        {isEdited && (
+          <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>Edited</span>
+        )}
 
         {/* Audit note */}
         <p
@@ -493,7 +545,7 @@ function MessagePreviewModal({
               >
                 Consent required — record consent to enable message delivery.
               </p>
-              <SecondaryButton onClick={onRecordConsent}>Record consent</SecondaryButton>
+              <SecondaryButton disabled={!onRecordConsent} onClick={onRecordConsent}>Record consent</SecondaryButton>
             </div>
           </div>
         )}
@@ -508,7 +560,7 @@ function MessagePreviewModal({
           padding: "0 20px 20px",
         }}
       >
-        <SecondaryButton onClick={onLogWithoutSending}>Log without sending</SecondaryButton>
+        <SecondaryButton onClick={onLogWithoutSending}>Skip message</SecondaryButton>
         <PrimaryButton disabled={!consentActive} onClick={onConfirm}>Confirm and send</PrimaryButton>
       </div>
     </ModalShell>
@@ -552,6 +604,11 @@ function StatusDrawer({
   currentStatus,
   transitionError,
   onClearError,
+  patientName,
+  caseNumber,
+  drug,
+  isDrawerOpen,
+  consentFlag,
 }: {
   onClose: () => void;
   onOpenModal: (text: string, toStatus: PaStatus, meta: TransitionMeta) => void;
@@ -559,6 +616,11 @@ function StatusDrawer({
   currentStatus: PaStatus;
   transitionError: string | null;
   onClearError: () => void;
+  patientName: string;
+  caseNumber: string;
+  drug: string | null;
+  isDrawerOpen: boolean;
+  consentFlag: boolean;
 }) {
   const [selectedTransition, setSelectedTransition] = useState<PaStatus>(
     () => getValidTransitions(currentStatus)[0] ?? "closed",
@@ -571,6 +633,14 @@ function StatusDrawer({
   const [reasonCode,      setReasonCode]      = useState("");
   const [appointmentLink, setAppointmentLink] = useState("");
   const [nextStepNote,    setNextStepNote]    = useState("");
+
+  useEffect(() => {
+    const first = getValidTransitions(currentStatus)[0] ?? "closed";
+    setSelectedTransition(first);
+    setMessageText(getPatientMessage(first));
+    setGateError(null);
+    setDocLink(""); setReasonCode(""); setAppointmentLink(""); setNextStepNote("");
+  }, [currentStatus]);
 
   useEffect(() => {
     setMessageText(getPatientMessage(selectedTransition));
@@ -605,7 +675,7 @@ function StatusDrawer({
               margin: 0,
             }}
           >
-            Case #1042 — Linh Nguyen
+            Case #{caseNumber} — {patientName}
           </h2>
           <div className="flex items-center gap-2">
             <span
@@ -613,8 +683,7 @@ function StatusDrawer({
             >
               Current status
             </span>
-            {/* TODO: hardcoded status — should derive from selectedCase.status */}
-            <StatusBadge status="submitted" />
+            <StatusBadge key={currentStatus} status={currentStatus} className="pa-chip-animate" />
           </div>
         </div>
         <button
@@ -655,22 +724,22 @@ function StatusDrawer({
                 Patient
               </span>
               <span style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43 }}>
-                Linh Nguyen
+                {patientName}
               </span>
             </div>
             <div className="flex flex-col gap-1">
               <span style={{ fontSize: "12px", fontWeight: 500, color: "#64748B", lineHeight: 1.4 }}>
                 Drug
               </span>
-              <span style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43 }}>
-                Nivolumab
+              <span style={{ fontSize: "13px", fontWeight: 400, color: "#64748B", lineHeight: 1.4, fontFamily: "Inter, sans-serif" }}>
+                {drug ?? "—"}
               </span>
             </div>
           </div>
         </div>
 
         {/* Transition selector */}
-        <div className="flex flex-col gap-1.5">
+        <div className="relative flex flex-col gap-1.5">
           <span
             style={{ fontSize: "14px", fontWeight: 500, color: "#0F172A", lineHeight: 1.43, display: "block" }}
           >
@@ -680,6 +749,7 @@ function StatusDrawer({
             currentStatus={currentStatus}
             value={selectedTransition}
             onChange={setSelectedTransition}
+            isDrawerOpen={isDrawerOpen}
           />
           {gateError && (
             <p
@@ -719,8 +789,10 @@ function StatusDrawer({
             boxSizing: "border-box" as const,
           };
           const onFocus = (e: React.FocusEvent<HTMLElement>) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "#2563EB";
-            (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 2px rgba(37,99,235,0.15)";
+            if (e.target.matches(":focus-visible")) {
+              (e.currentTarget as HTMLElement).style.borderColor = "#2563EB";
+              (e.currentTarget as HTMLElement).style.boxShadow = "0 0 0 2px rgba(37,99,235,0.15)";
+            }
           };
           const onBlur = (e: React.FocusEvent<HTMLElement>) => {
             (e.currentTarget as HTMLElement).style.borderColor = "#CBD5E1";
@@ -798,8 +870,10 @@ function StatusDrawer({
               outline: "none",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "#2563EB";
-              e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB";
+              if (e.target.matches(":focus-visible")) {
+                e.currentTarget.style.borderColor = "#2563EB";
+                e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB";
+              }
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = "#CBD5E1";
@@ -821,23 +895,30 @@ function StatusDrawer({
           >
             Consent
           </span>
-          <span
-            className="inline-flex items-center gap-1"
-            style={{
-              fontSize: "12px",
-              fontWeight: 500,
-              color: "#15803D",
-              backgroundColor: "#F0FDF4",
-              border: "1px solid rgba(20,83,45,0.20)",
-              borderRadius: "9999px",
-              padding: "3px 9px",
-              lineHeight: 1.4,
-              fontFamily: "Inter, sans-serif",
-            }}
-          >
-            <CheckCircle2 size={12} aria-hidden="true" />
-            Active
-          </span>
+          {consentFlag ? (
+            <span
+              className="inline-flex items-center gap-1"
+              style={{
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "#15803D",
+                backgroundColor: "#F0FDF4",
+                border: "1px solid rgba(20,83,45,0.20)",
+                borderRadius: "9999px",
+                padding: "3px 9px",
+                lineHeight: 1.4,
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              <CheckCircle2 size={12} aria-hidden="true" />
+              Consent on file
+            </span>
+          ) : (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#92400E", fontFamily: "Inter, sans-serif" }}>Consent required</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -969,7 +1050,7 @@ function StatusDrawer({
 
 // ── Audit Trail ──────────────────────────────────────────────────────────────
 
-function FilterDropdown({ label }: { label: string }) {
+function FilterDropdown({ label, onChange: _onChange }: { label: string; onChange?: (value: string | null) => void }) {
   return (
     <button
       type="button"
@@ -1231,6 +1312,7 @@ function AuditDrawer({ onClose, selectedCase }: {
   const [filterActionType, setFilterActionType] = useState<string | null>("Status change");
   const [filterActor, setFilterActor] = useState<string | null>(null);
   const [filterDateRange, setFilterDateRange] = useState<string | null>("last24h");
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const activeParts: string[] = [];
   if (filterActionType) activeParts.push(filterActionType);
@@ -1242,6 +1324,13 @@ function AuditDrawer({ onClose, selectedCase }: {
     const id = selectedCase?.id ?? "—";
     return id.length > 20 ? id.slice(0, 20) + "…" : id;
   })();
+
+  const filteredNodes = TIMELINE_NODES.filter((node) => {
+    if (filterActionType === "Status change" && node.type !== "transition") return false;
+    if (filterActor !== null && node.actor !== filterActor) return false;
+    // TODO: filter by filterDateRange when date-range picker is wired
+    return true;
+  });
 
   return (
     <div
@@ -1270,15 +1359,42 @@ function AuditDrawer({ onClose, selectedCase }: {
               Permanent record
             </span>
           </div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
-            style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
-            aria-label="Export CSV"
-          >
-            <Download size={13} aria-hidden="true" />
-            Export CSV
-          </button>
+          <div className="flex flex-col items-end gap-0.5">
+            <button
+              type="button"
+              disabled={selectedCase === null}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12px] font-medium leading-[1.4] transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ color: "#4A5568", borderColor: "#CBD5E1", backgroundColor: "transparent" }}
+              aria-label="Export CSV"
+              onClick={async () => {
+                if (!selectedCase) return;
+                const res = await fetch(`/api/cases/${selectedCase.id}/audit/export`, { method: "GET" });
+                if (!res.ok) {
+                  setExportError("Export failed — try again.");
+                  return;
+                }
+                setExportError(null);
+                const disposition = res.headers.get("Content-Disposition") ?? "";
+                const match = disposition.match(/filename="?([^";\n]+)"?/);
+                const filename = match?.[1] ?? `audit_${selectedCase.id}_${new Date().toISOString().slice(0, 10)}.csv`;
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download size={13} aria-hidden="true" />
+              Export CSV
+            </button>
+            {exportError && (
+              <span role="alert" style={{ fontSize: 11, color: "#BE123C", fontFamily: "Inter, sans-serif", lineHeight: 1.4 }}>
+                {exportError}
+              </span>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -1310,7 +1426,7 @@ function AuditDrawer({ onClose, selectedCase }: {
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Drug</dt>
               <dd style={{ fontFamily: "JetBrains Mono, monospace", color: "#475569", fontWeight: 400, fontSize: "12px", lineHeight: "1.4" }}>
-                {"—"}
+                {selectedCase?.drug ?? "—"}
               </dd>
             </div>
             <div className="flex flex-col gap-0.5">
@@ -1320,23 +1436,30 @@ function AuditDrawer({ onClose, selectedCase }: {
             <div className="flex flex-col gap-0.5">
               <dt className="text-[12px] font-medium leading-[1.4]" style={{ color: "#718096" }}>Consent</dt>
               <dd>
-                <span
-                  className="inline-flex items-center rounded-full font-semibold"
-                  style={{
-                    backgroundColor: selectedCase?.consent_flag ? "#D5F5E3" : "#FFFBEB",
-                    color: selectedCase?.consent_flag ? "#1E8449" : "#92400E",
-                    border: selectedCase?.consent_flag ? "1px solid rgba(30,132,73,0.25)" : "1px solid #FCD34D",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    lineHeight: 1,
-                    paddingLeft: "9px",
-                    paddingRight: "9px",
-                    paddingTop: "3px",
-                    paddingBottom: "3px",
-                  }}
-                >
-                  {selectedCase?.consent_flag ? "Active" : "Suppressed"}
-                </span>
+                {selectedCase?.consent_flag ? (
+                  <span
+                    className="inline-flex items-center rounded-full font-semibold"
+                    style={{
+                      backgroundColor: "#D5F5E3",
+                      color: "#1E8449",
+                      border: "1px solid rgba(30,132,73,0.25)",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      lineHeight: 1,
+                      paddingLeft: "9px",
+                      paddingRight: "9px",
+                      paddingTop: "3px",
+                      paddingBottom: "3px",
+                    }}
+                  >
+                    Consent on file
+                  </span>
+                ) : (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
+                    <span style={{ fontSize: 13, fontWeight: 500, color: "#92400E", fontFamily: "Inter, sans-serif" }}>Consent required</span>
+                  </span>
+                )}
               </dd>
             </div>
           </dl>
@@ -1345,9 +1468,9 @@ function AuditDrawer({ onClose, selectedCase }: {
         {/* Filter bar */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <FilterDropdown label="Action type" />
-            <FilterDropdown label="Actor" />
-            <FilterDropdown label="Date range" />
+            <FilterDropdown label="Action type" onChange={setFilterActionType} />
+            <FilterDropdown label="Actor" onChange={setFilterActor} />
+            <FilterDropdown label="Date range" onChange={setFilterDateRange} />
           </div>
           {activeParts.length > 0 && (
             <div className="flex items-center justify-between">
@@ -1369,8 +1492,8 @@ function AuditDrawer({ onClose, selectedCase }: {
 
         {/* Timeline */}
         <div className="flex flex-col">
-          {TIMELINE_NODES.map((node, i) => (
-            <TimelineNodeRow key={node.id} node={node} isLast={i === TIMELINE_NODES.length - 1} />
+          {filteredNodes.map((node, i) => (
+            <TimelineNodeRow key={node.id} node={node} isLast={i === filteredNodes.length - 1} />
           ))}
         </div>
 
@@ -1459,9 +1582,13 @@ function EmptyBodyNoResults() {
 function CreateCaseModal({
   onSubmit,
   onClose,
+  submitError,
+  isSubmitting,
 }: {
   onSubmit: (patientName: string, consentFlag: boolean) => void;
   onClose: () => void;
+  submitError: string | null;
+  isSubmitting: boolean;
 }) {
   const [patientName, setPatientName] = useState("");
   const [consentFlag, setConsentFlag] = useState(false);
@@ -1547,7 +1674,7 @@ function CreateCaseModal({
               boxSizing: "border-box",
               outline: "none",
             }}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+            onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB"; }}
             onBlur={(e) => {
               setNameTouched(true);
               e.currentTarget.style.boxShadow = "none";
@@ -1594,6 +1721,25 @@ function CreateCaseModal({
         </div>
       </div>
 
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            margin: "0 20px 12px",
+            padding: "10px 12px",
+            backgroundColor: "#FFF1F2",
+            border: "1px solid #FDA4AF",
+            borderRadius: 6,
+            fontSize: 13,
+            color: "#BE123C",
+            fontFamily: "Inter, sans-serif",
+            lineHeight: 1.4,
+          }}
+        >
+          {submitError}
+        </div>
+      )}
+
       {/* Footer */}
       <div
         style={{
@@ -1605,10 +1751,10 @@ function CreateCaseModal({
       >
         <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
         <PrimaryButton
-          disabled={nameEmpty}
+          disabled={nameEmpty || isSubmitting}
           onClick={() => onSubmit(patientName.trim(), consentFlag)}
         >
-          Create case
+          {isSubmitting ? "Creating…" : "Create case"}
         </PrimaryButton>
       </div>
     </ModalShell>
@@ -1628,31 +1774,46 @@ export default function App() {
   const [pendingMeta, setPendingMeta] = useState<TransitionMeta>({ doc_link: null, reason_code: null, appointment_link: null, next_step_note: null });
   const [auditOpen, setAuditOpen] = useState(false);
   const [showCreateCase, setShowCreateCase] = useState(false);
+  const [createCaseError, setCreateCaseError] = useState<string | null>(null);
+  const [isCreatingCase, setIsCreatingCase] = useState(false);
   const [cases, setCases] = useState<CaseListItem[]>([]);
   const [transitionError, setTransitionError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  async function fetchCases() {
+    if (!supabase) {
+      console.warn("Supabase env vars are not configured; skipping case fetch.");
+      return;
+    }
+    const { data, error } = await supabase
+      .from('cases')
+      .select('id, patient_name, drug, current_status, consent_flag, updated_at')
+      .order('updated_at', { ascending: false });
+    if (error) {
+      console.error('fetch cases error:', error.message);
+      return;
+    }
+    if (data) setCases(data.map(({ id, patient_name, drug, current_status, consent_flag, updated_at }) => ({
+      id, patient_name, drug: drug ?? null, status: current_status as PaStatus, consent_flag, updated_at,
+    })));
+  }
 
   useEffect(() => {
-    const fetchCases = async () => {
-      if (!supabase) {
-        console.warn("Supabase env vars are not configured; skipping case fetch.");
-        return;
-      }
+    fetchCases();
+  }, []);
 
-      const { data, error } = await supabase
-        .from('cases')
-        .select('id, patient_name, current_status, consent_flag, updated_at')
-        .order('updated_at', { ascending: false })
+  useEffect(() => {
+    if (drawerOpen) return;
+    const t = setTimeout(() => setSelectedCaseId(null), 200);
+    return () => clearTimeout(t);
+  }, [drawerOpen]);
 
-      if (error) {
-        console.error('fetch cases error:', error.message)
-        return
-      }
-      if (data) setCases(data.map(({ id, patient_name, current_status, consent_flag, updated_at }) => ({
-        id, patient_name, status: current_status as PaStatus, consent_flag, updated_at,
-      })))
+  useEffect(() => {
+    if (successToast) {
+      const t = setTimeout(() => setSuccessToast(null), 4000);
+      return () => clearTimeout(t);
     }
-    fetchCases()
-  }, [])
+  }, [successToast])
 
   useEffect(() => {
     if (!document.querySelector('link[data-pa-font]')) {
@@ -1711,6 +1872,10 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to_status: toStatus, ...meta, message_sent: messageSent, message_text: messageText, message_custom: messageCustom }),
       });
+      if (res.status === 401 || res.status === 403) {
+        setTransitionError("Session expired — please sign in again.");
+        return false;
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         console.error("transition failed:", err.error, err.message);
@@ -1719,6 +1884,7 @@ export default function App() {
       }
       const data = await res.json();
       setCases((prev) => prev.map((c) => c.id === selectedCaseId ? { ...c, status: data.case.status } : c));
+      setSuccessToast(`Status updated to ${BADGE_CONFIG[data.case.status as PAStatus]?.label ?? data.case.status}.`);
       // TODO: refetch audit trail when audit API is wired
       return true;
     } catch (err) {
@@ -1737,9 +1903,33 @@ export default function App() {
     setShowCreateCase(true);
   }
 
-  function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
-    console.log("create case", { patientName, consentFlag });
-    setShowCreateCase(false);
+  async function handleCreateCaseSubmit(patientName: string, consentFlag: boolean) {
+    setIsCreatingCase(true);
+    setCreateCaseError(null);
+    try {
+      const res = await fetch("/api/cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_name: patientName, consent_flag: consentFlag }),
+      });
+      if (res.status === 401 || res.status === 403) {
+        setCreateCaseError("Session expired — please sign in again.");
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setCreateCaseError(err.message ?? "Failed to create case. Please try again.");
+        return;
+      }
+      setShowCreateCase(false);
+      setCreateCaseError(null);
+      await fetchCases();
+      setSuccessToast("Case created successfully.");
+    } catch {
+      setCreateCaseError("Connection error — case wasn't created. Try again.");
+    } finally {
+      setIsCreatingCase(false);
+    }
   }
 
   async function handleConsentUpdate(id: string) {
@@ -1847,6 +2037,30 @@ export default function App() {
             Settings
           </button>
         </nav>
+
+        {/* Bottom user row */}
+        <div
+          style={{
+            borderTop: "1px solid #E2E8F0",
+            padding: 16,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <User size={16} aria-hidden="true" style={{ color: "#64748B", flexShrink: 0 }} />
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#475569",
+              fontFamily: "Inter, sans-serif",
+              lineHeight: 1.4,
+            }}
+          >
+            Demo Coordinator
+          </span>
+        </div>
       </aside>
 
       {/* ── Main Content ─────────────────────────────────────────────────────── */}
@@ -1893,7 +2107,7 @@ export default function App() {
                 border: "1px solid #CBD5E1",
                 fontFamily: "Inter, sans-serif",
               }}
-              onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+              onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB"; }}
               onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
             />
           </div>
@@ -1915,7 +2129,7 @@ export default function App() {
             onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--pa-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#2563EB")}
             onClick={handleCreateCase}
-            onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)")}
+            onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB, 0 0 0 4px rgba(37,99,235,0.2)"; }}
             onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
           >
             <PlusCircle size={14} aria-hidden="true" />
@@ -2004,24 +2218,9 @@ export default function App() {
                     fontFamily: "Inter, sans-serif",
                   }}
                 >
-                  Consent
-                </th>
-                <th
-                  className="text-left"
-                  style={{
-                    padding: "12px 16px",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    lineHeight: 1.4,
-                    color: "#475569",
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    fontFamily: "Inter, sans-serif",
-                  }}
-                >
                   Last Updated
                 </th>
-                <th style={{ width: 40, padding: "12px 16px" }}>
+                <th style={{ width: 32, padding: "12px 12px 12px 0" }}>
                   <span className="sr-only">Action</span>
                 </th>
               </tr>
@@ -2029,15 +2228,14 @@ export default function App() {
 
             <tbody>
               {filtered.map((c, idx) => {
-                const isHover = c.id === "2";
-                const isEven = idx % 2 === 1;
-                const rowBg = isHover ? "#F1F5F9" : isEven ? "#F1F5F9" : "#FFFFFF";
+                const isSelected = c.id === selectedCaseId && drawerOpen;
+                const rowBg = idx % 2 === 0 ? "#FFFFFF" : "#F8FAFC";
 
                 return (
                   <tr
                     key={c.id}
                     style={{
-                      backgroundColor: rowBg,
+                      backgroundColor: isSelected ? "#EFF6FF" : rowBg,
                       borderBottom: "1px solid #E2E8F0",
                       minHeight: 48,
                       cursor: "pointer",
@@ -2045,10 +2243,10 @@ export default function App() {
                     className="transition-colors duration-75 group"
                     onClick={() => openDrawer(String(c.id))}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#F1F5F9";
+                      if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#F8FAFC";
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = rowBg;
+                      (e.currentTarget as HTMLTableRowElement).style.backgroundColor = isSelected ? "#EFF6FF" : rowBg;
                     }}
                   >
                     {/* Checkbox */}
@@ -2058,7 +2256,7 @@ export default function App() {
                         style={{ width: 16, height: 16, color: checked.has(String(c.id)) ? "#2563EB" : "#CBD5E1" }}
                         onClick={(e) => { e.stopPropagation(); toggleCheck(String(c.id)); }}
                         aria-label={`Select ${c.patient_name}`}
-                        onFocus={(e) => (e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB")}
+                        onFocus={(e) => { if (e.target.matches(":focus-visible")) e.currentTarget.style.boxShadow = "0 0 0 2px #2563EB"; }}
                         onBlur={(e) => (e.currentTarget.style.boxShadow = "none")}
                       >
                         {checked.has(String(c.id))
@@ -2071,17 +2269,24 @@ export default function App() {
                     {/* Patient + Drug */}
                     <td style={{ padding: "12px 16px" }}>
                       <div className="flex flex-col gap-0.5">
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 500,
-                            lineHeight: 1.43,
-                            color: "#0F172A",
-                            fontFamily: "Inter, sans-serif",
-                          }}
-                        >
-                          {c.patient_name}
-                        </span>
+                        <div className="flex items-center" style={{ gap: 6 }}>
+                          <span
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 500,
+                              lineHeight: 1.43,
+                              color: "#0F172A",
+                              fontFamily: "Inter, sans-serif",
+                            }}
+                          >
+                            {c.patient_name}
+                          </span>
+                          {!c.consent_flag && (
+                            <span aria-label="Consent required" title="Patient has not consented to status updates">
+                              <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
+                            </span>
+                          )}
+                        </div>
                         <span
                           className="pa-mono"
                           style={{
@@ -2091,7 +2296,7 @@ export default function App() {
                             color: "#475569",
                           }}
                         >
-                          {"—"}
+                          {c.drug ?? "—"}
                         </span>
                       </div>
                     </td>
@@ -2099,13 +2304,6 @@ export default function App() {
                     {/* Status Badge */}
                     <td style={{ padding: "12px 16px" }}>
                       <StatusBadge key={c.status} status={c.status} className="pa-chip-animate" />
-                    </td>
-
-                    {/* Consent */}
-                    <td style={{ padding: "12px 16px" }}>
-                      {!c.consent_flag && (
-                        <ShieldAlert size={15} style={{ color: "#B7770D" }} aria-label="Consent required" />
-                      )}
                     </td>
 
                     {/* Last Updated */}
@@ -2119,15 +2317,15 @@ export default function App() {
                           color: "#64748B",
                         }}
                       >
-                        {c.updated_at}
+                        {formatDate(c.updated_at)}
                       </span>
                     </td>
 
                     {/* Chevron */}
-                    <td style={{ padding: "12px 16px", width: 40 }}>
+                    <td style={{ width: 32, padding: "12px 12px 12px 0", textAlign: "right" }}>
                       <ChevronRight
                         size={16}
-                        style={{ color: "#94A3B8" }}
+                        style={{ color: "#94A3B8", display: "inline-block" }}
                         aria-hidden="true"
                       />
                     </td>
@@ -2167,6 +2365,11 @@ export default function App() {
             currentStatus={(selectedCase?.status as PaStatus) ?? "new_order"}
             transitionError={transitionError}
             onClearError={() => setTransitionError(null)}
+            patientName={selectedCase?.patient_name ?? ""}
+            caseNumber={selectedCase?.id?.replace("case-", "") ?? ""}
+            drug={selectedCase?.drug ?? null}
+            isDrawerOpen={drawerOpen}
+            consentFlag={selectedCase?.consent_flag ?? false}
           />
         </div>
 
@@ -2235,7 +2438,9 @@ export default function App() {
         >
           <CreateCaseModal
             onSubmit={handleCreateCaseSubmit}
-            onClose={() => setShowCreateCase(false)}
+            onClose={() => { setShowCreateCase(false); setCreateCaseError(null); }}
+            submitError={createCaseError}
+            isSubmitting={isCreatingCase}
           />
         </div>
       )}
@@ -2269,7 +2474,43 @@ export default function App() {
             }}
             onClose={() => setModalOpen(false)}
             onRecordConsent={selectedCaseId !== null ? () => handleConsentUpdate(selectedCaseId) : undefined}
+            isEdited={modalMessageText !== getPatientMessage(pendingToStatus ?? "new_order")}
           />
+        </div>
+      )}
+
+      {successToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 9999,
+            backgroundColor: "#F0FDF4",
+            borderLeft: "3px solid #86EFAC",
+            borderRadius: 6,
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.10)",
+            fontFamily: "Inter, sans-serif",
+            minWidth: 240,
+            maxWidth: 360,
+          }}
+        >
+          <CheckCircle2 size={16} aria-hidden="true" style={{ color: "#15803D", flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: "#15803D", lineHeight: 1.4, flex: 1 }}>{successToast}</span>
+          <button
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            aria-label="Dismiss"
+            style={{ background: "none", border: "none", cursor: "pointer", color: "#15803D", padding: 2, display: "flex", alignItems: "center", flexShrink: 0 }}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
         </div>
       )}
     </div>

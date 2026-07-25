@@ -16,6 +16,7 @@ export const DEMO_EVENT_TYPES: readonly DemoEventType[] = ["reset", "clone", "re
 export type CaseSummary = {
   id: CaseId;
   patient_name: string;
+  drug: string | null;
   status: PaStatus;
   consent_flag: boolean;
   updated_at: IsoTimestamp;
@@ -66,6 +67,7 @@ export type CreateCaseRequest = {
   patient_name: string;
   consent_flag: boolean;
   doc_link?: string | null;
+  drug?: string | null;
 };
 
 export type CreateCaseResponse = {
@@ -146,4 +148,9 @@ export type CloneCaseResponse = {
     created_at: IsoTimestamp;
   };
   source_demo_event: DemoEvent;
+};
+
+export type ReopenCaseResponse = {
+  case: Pick<CaseSummary, "id" | "status" | "updated_at">;
+  demo_event: DemoEvent;
 };

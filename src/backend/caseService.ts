@@ -16,6 +16,7 @@ import type { PaStatus } from "./statusMachine.ts";
 export type CaseRow = {
   id: CaseId;
   patient_name: string;
+  drug?: string | null;
   current_status: PaStatus;
   consent_flag: boolean;
   doc_link: string | null;
@@ -30,6 +31,7 @@ export type CreateCaseInput = Partial<CreateCaseRequest>;
 
 export type CaseInsertDraft = {
   patient_name: string;
+  drug: string | null;
   current_status: "new_order";
   consent_flag: boolean;
   doc_link: string | null;
@@ -105,8 +107,10 @@ export function prepareCreateCase(
 
   const patientName = request.patient_name.trim();
   const docLink = normalizeOptionalText(request.doc_link);
+  const drug = normalizeOptionalText(request.drug);
   const insert: CaseInsertDraft = {
     patient_name: patientName,
+    drug,
     current_status: "new_order",
     consent_flag: request.consent_flag,
     doc_link: docLink,
@@ -125,6 +129,7 @@ export function prepareCreateCase(
         case: {
           id: generatedId,
           patient_name: patientName,
+          drug,
           status: "new_order",
           consent_flag: request.consent_flag,
           doc_link: docLink,
@@ -142,6 +147,7 @@ export function mapCaseRowToSummary(row: CaseRow): CaseSummary {
   return {
     id: row.id,
     patient_name: row.patient_name,
+    drug: row.drug ?? null,
     status: row.current_status,
     consent_flag: row.consent_flag,
     updated_at: row.updated_at,
