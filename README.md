@@ -22,10 +22,10 @@ The prototype does **not** retrieve real-time authorization status. Coordinators
 | Layer | Current decision |
 |---|---|
 | Database, auth, RLS | Supabase/Postgres |
-| Front-end framework | Open until recorded in `DECISIONS.md` |
+| Front-end framework | React 18 + Vite + TypeScript (D06) |
 | Design tooling | Figma; repository design rules apply after team approval |
 | Development assistants | Claude Code and Codex, subject to repository instructions |
-| Hosting | Open until recorded in `DECISIONS.md` |
+| Hosting | Vercel (D07) |
 | Data | Synthetic/mock only |
 | Expected concurrency | Approximately 2–4 internal demo users |
 
@@ -84,9 +84,27 @@ python mercator/mercator.py \
 
 ## Local application setup
 
-The exact commands remain provisional until the front-end framework and package scripts are recorded in `DECISIONS.md`. Do not publish framework-specific setup commands before that decision is made.
+```bash
+# Prerequisites
+# Node.js 18+
+# Supabase project credentials (get project URL + anon key from team — do not commit live values)
 
-Environment secrets must remain outside the repository. Commit an `.env.example` containing names only, never live values.
+# Install
+npm install
+
+# Environment
+cp .env.example .env
+# Fill in SUPABASE_URL and SUPABASE_ANON_KEY
+
+# Dev server
+npm run dev
+
+# Build
+npm run build
+
+# Preview production build locally
+npm run preview
+```
 
 ## Success criteria
 
