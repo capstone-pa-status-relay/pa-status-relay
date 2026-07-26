@@ -427,22 +427,27 @@ function MessagePreviewModal({
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "space-between",
           padding: "20px 20px 0",
         }}
       >
-        <h2
-          style={{
-            fontSize: 16,
-            fontWeight: 600,
-            lineHeight: "1.35",
-            color: DS.textPrimary,
-            margin: 0,
-          }}
-        >
-          Patient message preview
-        </h2>
+        <div>
+          <h2
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              lineHeight: "1.35",
+              color: DS.textPrimary,
+              margin: 0,
+            }}
+          >
+            Patient message preview
+          </h2>
+          <p style={{ fontSize: 12, fontWeight: 400, color: DS.textMuted, lineHeight: "1.4", margin: "4px 0 0", fontFamily: "Inter, sans-serif" }}>
+            Status already updated. Confirm or skip the patient notification.
+          </p>
+        </div>
         <button
           aria-label="Close modal"
           onClick={onClose}
@@ -845,6 +850,9 @@ function StatusDrawer({
                   onBlur={onBlur}
                 />
               )}
+              <span style={{ fontSize: "12px", color: "var(--pa-text-muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.4 }}>
+                Required to proceed with this transition.
+              </span>
             </div>
           );
         })()}
@@ -910,6 +918,7 @@ function StatusDrawer({
           {consentFlag ? (
             <span
               className="inline-flex items-center gap-1"
+              title="Patient has consented to status update messages"
               style={{
                 fontSize: "12px",
                 fontWeight: 500,
@@ -926,7 +935,7 @@ function StatusDrawer({
               Consent on file
             </span>
           ) : (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span title="No consent on file" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <TriangleAlert size={15} style={{ color: "#92400E" }} aria-hidden="true" />
               <span style={{ fontSize: 13, fontWeight: 500, color: "#92400E", fontFamily: "Inter, sans-serif" }}>Consent required</span>
             </span>
@@ -955,6 +964,9 @@ function StatusDrawer({
               Controls for scenario testing
             </span>
           </div>
+          <span style={{ fontSize: "11px", color: "var(--pa-text-muted)", fontFamily: "Inter, sans-serif", lineHeight: 1.4, display: "block", marginBottom: 6 }}>
+            Demo controls
+          </span>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {(
               [
@@ -1077,6 +1089,7 @@ function StatusDrawer({
       >
         <button
           type="button"
+          title="Saves the transition without sending a patient update."
           onClick={() => {
             const gate = getTransitionGate(currentStatus, selectedTransition);
             const activeValue = gate?.field === "doc_link" ? docLink
@@ -1741,14 +1754,14 @@ function EmptyBodyNoResults() {
 function EmptyBodyNoStatusMatch() {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
-      <SearchX size={40} style={{ color: "#64748B", marginBottom: 12 }} aria-hidden="true" />
+      <SearchX size={40} style={{ color: "var(--pa-text-muted)", marginBottom: 12 }} aria-hidden="true" />
       <span
         style={{
           fontFamily: "Inter, sans-serif",
           fontSize: 16,
           fontWeight: 600,
           lineHeight: "1.35",
-          color: "#0F172A",
+          color: "var(--pa-text-primary)",
         }}
       >
         No cases with this status.
@@ -2505,7 +2518,7 @@ export default function App() {
                     className="transition-colors duration-75 group"
                     onClick={() => openDrawer(String(c.id))}
                     onMouseEnter={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "#F8FAFC";
+                      if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "var(--pa-surface-alt)";
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLTableRowElement).style.backgroundColor = isSelected ? "#EFF6FF" : rowBg;
