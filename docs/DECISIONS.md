@@ -163,16 +163,11 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rationale:** Chris's recommendation during PR review (option 1 of the two offered: atomic DB functions vs. explicitly accepting partial-write risk for MVP). Matches the audit-trail-integrity premise the whole project is built on.
 **Rejected:** Accepting the partial-write risk for MVP — rejected because a broken audit trail is a core product guarantee, not a polish item, and the fix cost was low (three small functions, no schema redesign).
 
----
-
-## Open Items (resolve and move to Locked Decisions above)
-
-### Q4 — Demo credentials
-**Status:** Open — resolve before Day 4 EOD
-**Question:** How many credential sets? Who gets access on Day 5?
-**Owner:** QA (Natalie)
-**Constraint:** Reviewer credentials must be tested in a fresh incognito browser session before Day 5.
-**Resolution:** *(fill in)*
+### D20 — Demo credentials and access model
+**Date:** July 2026 (Day 4 EOD, Q4 resolution)
+**Decision:** One shared credential set. Presenters only during the live demo session. School evaluators and reviewers receive access after the presentation ends, or before with the understanding that Reset to baseline runs on all five cases the morning of the demo before presenting.
+**Rationale:** One shared database means any logged-in user can change case state live. Limiting active access during the presentation eliminates the risk of a case moving mid-demo. Reset to baseline (already built and verified per D14) handles any pre-demo state changes from early evaluator access.
+**Rejected:** Multiple credential sets — provides no isolation since all users share the same five cases and same database.
 
 ---
 
