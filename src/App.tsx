@@ -1738,6 +1738,25 @@ function EmptyBodyNoResults() {
   );
 }
 
+function EmptyBodyNoStatusMatch() {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+      <SearchX size={40} style={{ color: "#64748B", marginBottom: 12 }} aria-hidden="true" />
+      <span
+        style={{
+          fontFamily: "Inter, sans-serif",
+          fontSize: 16,
+          fontWeight: 600,
+          lineHeight: "1.35",
+          color: "#0F172A",
+        }}
+      >
+        No cases with this status.
+      </span>
+    </div>
+  );
+}
+
 // ── Create Case Modal ─────────────────────────────────────────────────────────
 function CreateCaseModal({
   onSubmit,
@@ -2580,7 +2599,11 @@ export default function App() {
                 <tr>
                   <td colSpan={6}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0" }}>
-                      {search !== "" ? <EmptyBodyNoResults /> : <EmptyBodyNoCases onCreateCase={handleCreateCase} />}
+                      {search !== ""
+                        ? <EmptyBodyNoResults />
+                        : activeFilter !== "all"
+                          ? <EmptyBodyNoStatusMatch />
+                          : <EmptyBodyNoCases onCreateCase={handleCreateCase} />}
                     </div>
                   </td>
                 </tr>
