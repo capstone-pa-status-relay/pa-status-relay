@@ -2057,6 +2057,7 @@ export default function App() {
     setModalMessageText(text);
     setPendingToStatus(toStatus);
     setPendingMeta(meta);
+    setTransitionError(null);
     setModalOpen(true);
   }
 
@@ -2518,7 +2519,7 @@ export default function App() {
                     className="transition-colors duration-75 group"
                     onClick={() => openDrawer(String(c.id))}
                     onMouseEnter={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "var(--pa-surface-alt)";
+                      if (!isSelected) (e.currentTarget as HTMLTableRowElement).style.backgroundColor = "var(--pa-border, #E2E8F0)";
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLTableRowElement).style.backgroundColor = isSelected ? "#EFF6FF" : rowBg;
