@@ -1623,7 +1623,7 @@ function AuditDrawer({ onClose, selectedCase, refreshToken }: {
             <FilterDropdown
               label="Action type"
               value={filterActionType}
-              options={["Status change", "Message suppressed", "Custom message"]}
+              options={["Status change", "No message sent", "Custom message"]}
               onChange={setFilterActionType}
             />
             <FilterDropdown
@@ -2296,8 +2296,9 @@ export default function App() {
             borderTop: "1px solid #E2E8F0",
             padding: 16,
             display: "flex",
-            alignItems: "center",
-            gap: 8,
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 2,
           }}
         >
           <User size={16} aria-hidden="true" style={{ color: "#64748B", flexShrink: 0 }} />
@@ -2309,6 +2310,7 @@ export default function App() {
               fontFamily: "Inter, sans-serif",
               lineHeight: 1.4,
               flex: 1,
+              whiteSpace: "nowrap",
             }}
           >
             Demo Coordinator
@@ -2321,12 +2323,12 @@ export default function App() {
             }}
             style={{
               background: "none",
-              border: "none",
+              border: "1px solid currentColor",
               cursor: "pointer",
               fontSize: 12,
               color: "#94A3B8",
               fontFamily: "Inter, sans-serif",
-              padding: "2px 4px",
+              padding: "2px 8px",
               borderRadius: 4,
               lineHeight: 1.4,
               flexShrink: 0,
@@ -2368,7 +2370,7 @@ export default function App() {
             />
             <input
               type="search"
-              placeholder="Search cases…"
+              placeholder="Search by patient or drug name"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-md focus:outline-none"
