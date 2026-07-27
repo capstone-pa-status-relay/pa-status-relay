@@ -1,5 +1,7 @@
 # PA Status Relay
 
+Problem: Oncology coordinators currently rely on manual, disconnected portal checks to track prior authorizations for infused drugs, resulting in operational bottlenecks, repetitive patient status inquiries, and unmitigated financial risk.
+
 PA Status Relay is a five-day workflow prototype for oncology infusion coordinators. It demonstrates manually logged prior-authorization status transitions, required-metadata enforcement, patient-message previews, consent gating, and immutable audit evidence for infused, buy-and-bill drugs.
 
 **Team:** Jillian Krebsbach, Natalie Walker, Chris Wozniak, Lee McDonald  
