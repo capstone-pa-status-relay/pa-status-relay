@@ -169,6 +169,13 @@ This string is used in both the StatusDrawer (when consent=FALSE) and the Messag
 **Rationale:** One shared database means any logged-in user can change case state live. Limiting active access during the presentation eliminates the risk of a case moving mid-demo. Reset to baseline (already built and verified per D14) handles any pre-demo state changes from early evaluator access.
 **Rejected:** Multiple credential sets — provides no isolation since all users share the same five cases and same database.
 
+### D21 — Schema addition: `cases.payer_name`
+
+**Date:** July 2026 (Day 5)
+**Decision:** Added `cases.payer_name text` (nullable, same treatment as `drug` — case identity, not workflow state: excluded from `baseline_snapshot`, untouched by Reset, carried through on Clone). Threaded through the full backend contract so the field is usable end to end, not just present in the database: `apiTypes.ts` (`CaseSummary.payer_name`, `CreateCaseRequest.payer_name`), `caseService.ts` (`CaseRow`, `CaseInsertDraft`, `prepareCreateCase`, `mapCaseRowToSummary`), `supabaseRepository.ts` (row mapping, insert, `clone_case` RPC param), and `demoControlService.ts`'s `prepareCloneCase` (copies the source case's payer onto the clone, matching `drug`). `clone_case`'s Postgres function signature changed (added `p_payer_name`), so the migration explicitly drops the old 12-arg overload first — `CREATE OR REPLACE` does not swap a function whose parameter list changed, it adds a second overload instead. Seed data backfilled with a payer per demo case (Aetna, UnitedHealthcare, Cigna, Blue Cross Blue Shield, Humana — synthetic, no real payer relationship implied).
+**Rationale:** Scoped between Lee (schema/seed/backend plumbing) and Jill (Create Case modal, Case List, Case Details UI) as an open item going into the Day 5 demo. Backend done first since the UI has nothing to wire up against until the column and API contract exist.
+**Rejected:** Schema/seed-only change with no backend plumbing — would leave Jill's UI work with no working API path to persist or read the field once she builds it.
+
 ---
 
 *DECISIONS.md · v2.0 · July 2026 · Update when open items resolve — do not close silently*

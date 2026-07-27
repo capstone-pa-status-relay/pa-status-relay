@@ -67,6 +67,7 @@ type CasesTableRow = {
   id: string;
   patient_name: string;
   drug: string | null;
+  payer_name: string | null;
   current_status: CaseRow["current_status"];
   consent_flag: boolean;
   doc_link: string | null;
@@ -108,6 +109,7 @@ function toCaseRow(row: CasesTableRow): CaseRow {
     id: row.id,
     patient_name: row.patient_name,
     drug: row.drug,
+    payer_name: row.payer_name,
     current_status: row.current_status,
     consent_flag: row.consent_flag,
     doc_link: row.doc_link,
@@ -222,6 +224,7 @@ export function createSupabaseBackendRepository(): BackendRepository {
           id: insert.id,
           patient_name: insert.patient_name,
           drug: insert.drug,
+          payer_name: insert.payer_name,
           current_status: insert.current_status,
           consent_flag: insert.consent_flag,
           doc_link: insert.doc_link,
@@ -363,6 +366,7 @@ export function createSupabaseBackendRepository(): BackendRepository {
         p_new_case_id: caseInsert.id,
         p_patient_name: caseInsert.patient_name,
         p_drug: caseInsert.drug,
+        p_payer_name: caseInsert.payer_name,
         p_consent_flag: caseInsert.consent_flag,
         p_baseline_snapshot: baseline,
         p_created_at: caseInsert.created_at,
