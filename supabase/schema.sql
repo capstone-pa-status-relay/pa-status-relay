@@ -26,6 +26,7 @@ create table cases (
   id uuid primary key default gen_random_uuid(),
   patient_name text not null,
   drug text,
+  payer_name text,
   current_status pa_status not null default 'new_order',
   consent_flag boolean not null default false,
   doc_link text,
@@ -218,10 +219,18 @@ $$;
 revoke execute on function reset_case(uuid, text, pa_status, boolean, text, text, text, timestamptz, uuid, uuid, timestamptz, text) from public, anon, authenticated;
 grant execute on function reset_case(uuid, text, pa_status, boolean, text, text, text, timestamptz, uuid, uuid, timestamptz, text) to service_role;
 
+-- payer_name added the clone_case parameter after this function's initial
+-- deployment. CREATE OR REPLACE only swaps a function whose signature is
+-- unchanged — a different parameter list creates a new overload instead of
+-- replacing the old one, so the prior 12-arg version is dropped explicitly
+-- if this is being re-run against a database that already has it.
+drop function if exists clone_case(uuid, text, text, boolean, jsonb, timestamptz, uuid, uuid, uuid, uuid, timestamptz, text);
+
 create or replace function clone_case(
   p_new_case_id uuid,
   p_patient_name text,
   p_drug text,
+  p_payer_name text,
   p_consent_flag boolean,
   p_baseline_snapshot jsonb,
   p_created_at timestamptz,
@@ -239,11 +248,11 @@ declare
   v_event demo_events;
 begin
   insert into cases (
-    id, patient_name, drug, current_status, consent_flag,
+    id, patient_name, drug, payer_name, current_status, consent_flag,
     doc_link, appointment_link, next_step_note, baseline_snapshot,
     created_at, updated_at, created_by
   ) values (
-    p_new_case_id, p_patient_name, p_drug, 'new_order', p_consent_flag,
+    p_new_case_id, p_patient_name, p_drug, p_payer_name, 'new_order', p_consent_flag,
     null, null, null, p_baseline_snapshot,
     p_created_at, p_created_at, p_created_by
   )
@@ -257,5 +266,5 @@ begin
 end;
 $$;
 
-revoke execute on function clone_case(uuid, text, text, boolean, jsonb, timestamptz, uuid, uuid, uuid, uuid, timestamptz, text) from public, anon, authenticated;
-grant execute on function clone_case(uuid, text, text, boolean, jsonb, timestamptz, uuid, uuid, uuid, uuid, timestamptz, text) to service_role;
+revoke execute on function clone_case(uuid, text, text, text, boolean, jsonb, timestamptz, uuid, uuid, uuid, uuid, timestamptz, text) from public, anon, authenticated;
+grant execute on function clone_case(uuid, text, text, text, boolean, jsonb, timestamptz, uuid, uuid, uuid, uuid, timestamptz, text) to service_role;

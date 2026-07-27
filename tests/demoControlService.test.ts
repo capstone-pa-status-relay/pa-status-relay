@@ -15,6 +15,7 @@ const currentCase: CaseDetail = {
   id: "case_001",
   patient_name: "Edited Demo Patient",
   drug: "Pembrolizumab",
+  payer_name: "Aetna",
   status: "approved",
   consent_flag: true,
   doc_link: "https://example.test/edited-doc",
@@ -118,6 +119,7 @@ test("prepares clone case insert with new_order status and empty metadata", () =
   assert.deepEqual(result.case_insert, {
     patient_name: "Edited Demo Patient",
     drug: "Pembrolizumab",
+    payer_name: "Aetna",
     current_status: "new_order",
     consent_flag: true,
     doc_link: null,

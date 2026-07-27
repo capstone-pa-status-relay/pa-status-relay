@@ -17,6 +17,7 @@ export type CaseSummary = {
   id: CaseId;
   patient_name: string;
   drug: string | null;
+  payer_name: string | null;
   status: PaStatus;
   consent_flag: boolean;
   updated_at: IsoTimestamp;
@@ -68,6 +69,7 @@ export type CreateCaseRequest = {
   consent_flag: boolean;
   doc_link?: string | null;
   drug?: string | null;
+  payer_name?: string | null;
 };
 
 export type CreateCaseResponse = {
