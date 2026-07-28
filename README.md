@@ -107,6 +107,19 @@ npm run build
 # Preview production build locally
 npm run preview
 ```
+#Screenshots 
+### Coordinator case list
+<img width="1446" height="825" alt="Screenshot 2026-07-27 at 9 17 30 PM" src="https://github.com/user-attachments/assets/ad0083e8-7a4e-4c68-a79b-7c9df701078c" />
+
+### Case detail with status transitions
+<img width="1459" height="833" alt="Screenshot 2026-07-27 at 9 24 18 PM" src="https://github.com/user-attachments/assets/5bf4366d-7143-43cb-84de-c208e0cb64ae" />
+
+
+### Message preview with consent gating
+<img width="1441" height="823" alt="Screenshot 2026-07-27 at 9 24 01 PM" src="https://github.com/user-attachments/assets/f0e1af61-8962-4f1c-950e-7d498e098ba3" />
+
+
+
 
 ## Success criteria
 
