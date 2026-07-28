@@ -43,7 +43,7 @@ test("mounted transition route imports handler glue and reports missing Supabase
   await transitionHandler(
     {
       method: "POST",
-      query: { id: "case_001" },
+      query: { id: "00000000-0000-0000-0000-000000000001" },
       body: {
         to_status: "submitted",
         doc_link: "mock-doc",
@@ -73,7 +73,7 @@ test("all mounted case subroutes import handler glue and report missing Supabase
     await route.handler(
       {
         method: route.method,
-        query: { id: "case_001" },
+        query: { id: "00000000-0000-0000-0000-000000000001" },
         body: route.body,
       },
       response,

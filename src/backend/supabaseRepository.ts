@@ -202,6 +202,14 @@ export function createSupabaseBackendRepository(): BackendRepository {
     },
 
     async getCaseRowById(caseId: CaseId): Promise<CaseRow | null> {
+      // A malformed (non-UUID) id can never match a row — querying Postgres
+      // with one throws an "invalid input syntax for type uuid" error that
+      // isn't a real "unexpected" failure, so it's treated as not-found here
+      // instead of falling through to withApiErrorBoundary's generic 500.
+      if (!UUID_PATTERN.test(caseId)) {
+        return null;
+      }
+
       const { data, error } = await getClient()
         .from("cases")
         .select("*")
