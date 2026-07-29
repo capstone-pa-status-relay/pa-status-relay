@@ -2550,7 +2550,7 @@ export default function App() {
                         <div className="flex items-center" style={{ gap: 6 }}>
                           <span
                             style={{
-                              fontSize: 14,
+                              fontSize: 16,
                               fontWeight: 500,
                               lineHeight: 1.43,
                               color: "#0F172A",
